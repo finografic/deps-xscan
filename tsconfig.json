@@ -1,0 +1,38 @@
+{
+  "compilerOptions": {
+    "target": "esnext",
+    "lib": ["es2023"],
+    "moduleDetection": "force",
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "types": ["node"],
+    "strict": true,
+    "noUnusedLocals": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "emitDeclarationOnly": true,
+    "esModuleInterop": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "allowSyntheticDefaultImports": true,
+    "outDir": "./dist",
+    "rootDir": ".",
+    "paths": {
+      "commands/*": ["./src/commands/*"],
+      "config/*": ["./src/config/*"],
+      "features/*": ["./src/features/*"],
+      "help/*": ["./src/help/*"],
+      "lib/*": ["./src/lib/*"],
+      "types": ["./src/types"],
+      "types/*": ["./src/types/*"],
+      "utils": ["./src/utils"],
+      "utils/*": ["./src/utils/*"]
+    }
+  },
+  "include": ["src/**/*", "scripts/**/*.ts"],
+  "exclude": ["node_modules", "dist", "evals"]
+}

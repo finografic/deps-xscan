@@ -1,0 +1,129 @@
+{
+  "name": "@finografic/dep-scan",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Deep dependency security scanner — cross-references lockfile deps against Node.js security posts, OSV.dev.",
+  "keywords": [
+    "cli",
+    "dep-scan",
+    "finografic",
+    "genx:type:cli"
+  ],
+  "homepage": "https://github.com/finografic/dep-scan",
+  "bugs": {
+    "url": "https://github.com/finografic/dep-scan/issues"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "Justin",
+    "email": "justin.blair.rankin@gmail.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/finografic/dep-scan.git"
+  },
+  "bin": {
+    "dep-scan": "./dist/index.mjs"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "main": "./dist/index.mjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "exports": {
+    ".": "./dist/index.mjs",
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "scripts": {
+    "---------- SCANNER": "-----------------------------------------------------",
+    "dev": "tsdown --watch",
+    "build": "tsdown",
+    "link": "pnpm build && pnpm link --global",
+    "unlink": "pnpm unlink --global",
+    "scan": "tsx scripts/orchestrator.ts",
+    "scan:verbose": "tsx scripts/orchestrator.ts --verbose",
+    "scan:json": "tsx scripts/orchestrator.ts --format json",
+    "scan:no-cache": "tsx scripts/orchestrator.ts --no-cache --verbose",
+    "script:parse-lockfile": "tsx scripts/parse-lockfile.ts",
+    "script:scrape-posts": "tsx scripts/scrape-node-posts.ts",
+    "script:query-osv": "tsx scripts/query-osv.ts",
+    "script:correlate": "tsx scripts/correlate.ts",
+    "·········· TESTING": "···················································",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "·········· LINTING": "···················································",
+    "lint": "oxlint -c oxlint.config.ts",
+    "lint:fix": "oxlint -c oxlint.config.ts --fix",
+    "lint:md": "md-lint",
+    "lint:md:fix": "md-lint --fix",
+    "lint:ci": "oxlint -c oxlint.config.ts --quiet",
+    "·········· FORMATTING": "················································",
+    "format:check": "oxfmt --check",
+    "format:fix": "oxfmt",
+    "·········· PUBLISH:GITHUB": "············································",
+    "release:github:patch": "pnpm run release:check && pnpm version patch && git push --follow-tags",
+    "release:github:minor": "pnpm run release:check && pnpm version minor && git push --follow-tags",
+    "release:github:major": "pnpm run release:check && pnpm version major && git push --follow-tags",
+    "release:check": "pnpm lint:fix && pnpm typecheck && pnpm test:run",
+    "release:publish": "pnpm publish --registry https://npm.pkg.github.com",
+    "·········· REGISTRIES": "················································",
+    "view:registry:github": "pnpm view @finografic/dep-scan --registry=https://npm.pkg.github.com",
+    "·········· PACKAGES": "··················································",
+    "update:oxc-config": "pnpm update @finografic/oxc-config --latest && pnpm update oxfmt --latest && pnpm update oxlint --latest",
+    "update:deps:all": "pnpm update --latest",
+    "·········· UTILS": "·····················································",
+    "tsc:debug": "tsc --pretty --project tsconfig.json",
+    "typecheck": "tsc --project tsconfig.json --noEmit",
+    "prepack": "pnpm build",
+    "prepare": "husky",
+    "dev:cli": "NODE_ENV=development tsx src/cli.ts --"
+  },
+  "dependencies": {
+    "js-yaml": "^4.1.1",
+    "node-fetch": "^3.3.2",
+    "picocolors": "^1.1.1",
+    "semver": "^7.7.4"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^20.2.0",
+    "@commitlint/config-conventional": "^20.2.0",
+    "@finografic/md-lint": "^0.8.2",
+    "@finografic/oxc-config": "^2.0.0",
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^24.0.0",
+    "@types/semver": "^7.5.8",
+    "globals": "^17.3.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
+    "oxfmt": "^0.43.0",
+    "oxlint": "^1.60.0",
+    "oxlint-tsgolint": "^0.21.1",
+    "tsdown": "^0.20.3",
+    "tsx": "^4.16.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,mjs,cjs}": [
+      "oxfmt --no-error-on-unmatched-pattern",
+      "oxlint -c oxlint.config.ts --fix --no-error-on-unmatched-pattern"
+    ],
+    "*.md": [
+      "oxfmt --no-error-on-unmatched-pattern",
+      "md-lint --fix"
+    ],
+    "*.{json,jsonc,yml,yaml,toml}": [
+      "oxfmt --no-error-on-unmatched-pattern"
+    ]
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "packageManager": "pnpm@10.32.1"
+}
