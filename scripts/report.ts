@@ -1,42 +1,30 @@
-import { writeFileSync } from "fs";
-import { CorrelationResult, Finding, NodeVersionFinding } from "./correlate";
+import { writeFileSync } from 'node:fs';
+import pc from 'picocolors';
+import type { CorrelationResult, Finding } from './correlate';
 
-// We use chalk for terminal colors. If not available, fall back to plain text.
-let chalk: any;
-try {
-  chalk = require("chalk");
-} catch {
-  // Fallback: no-op chalk
-  const identity = (s: string) => s;
-  chalk = new Proxy(identity, {
-    get: () => identity,
-  });
-}
-
-export type OutputFormat = "terminal" | "json" | "both";
+export type OutputFormat = 'terminal' | 'json' | 'both';
 
 /**
  * Generate the scan report in the requested format(s).
  */
 export function generateReport(
   result: CorrelationResult,
-  format: OutputFormat = "both",
-  jsonOutputPath?: string
+  format: OutputFormat = 'both',
+  jsonOutputPath?: string,
 ): void {
-  if (format === "terminal" || format === "both") {
+  if (format === 'terminal' || format === 'both') {
     printTerminalReport(result);
   }
 
-  if (format === "json" || format === "both") {
+  if (format === 'json' || format === 'both') {
     const jsonOutput = JSON.stringify(result, null, 2);
     if (jsonOutputPath) {
-      writeFileSync(jsonOutputPath, jsonOutput, "utf-8");
-      console.log(`\n${chalk.dim(`JSON report saved to: ${jsonOutputPath}`)}`);
+      writeFileSync(jsonOutputPath, jsonOutput, 'utf-8');
+      console.log(`\n${pc.dim(`JSON report saved to: ${jsonOutputPath}`)}`);
     } else {
-      // Write to stdout-friendly location
-      const defaultPath = "dep-scan-report.json";
-      writeFileSync(defaultPath, jsonOutput, "utf-8");
-      console.log(`\n${chalk.dim(`JSON report saved to: ${defaultPath}`)}`);
+      const defaultPath = 'dep-scan-report.json';
+      writeFileSync(defaultPath, jsonOutput, 'utf-8');
+      console.log(`\n${pc.dim(`JSON report saved to: ${defaultPath}`)}`);
     }
   }
 }
@@ -44,48 +32,44 @@ export function generateReport(
 function printTerminalReport(result: CorrelationResult): void {
   const { summary, nodeVersionFindings, dependencyFindings } = result;
 
-  // Header
   console.log();
-  console.log(chalk.bold.white("╔══════════════════════════════════════════════════════╗"));
-  console.log(chalk.bold.white("║") + chalk.bold.cyan("  dep-tree-scanner — Security Report") + chalk.bold.white("                 ║"));
-  console.log(chalk.bold.white("╚══════════════════════════════════════════════════════╝"));
-  console.log();
-
-  // Scan metadata
-  console.log(chalk.dim(`  Scanned at:     ${result.scannedAt}`));
-  console.log(chalk.dim(`  Node version:   ${result.projectNodeVersion || "not detected"}`));
-  console.log(chalk.dim(`  Total deps:     ${result.totalDeps}`));
+  console.log(pc.bold(pc.white('╔══════════════════════════════════════════════════════╗')));
+  console.log(
+    pc.bold(pc.white('║')) +
+      pc.bold(pc.cyan('  dep-tree-scanner — Security Report')) +
+      pc.bold(pc.white('                 ║')),
+  );
+  console.log(pc.bold(pc.white('╚══════════════════════════════════════════════════════╝')));
   console.log();
 
-  // Summary bar
+  console.log(pc.dim(`  Scanned at:     ${result.scannedAt}`));
+  console.log(pc.dim(`  Node version:   ${result.projectNodeVersion || 'not detected'}`));
+  console.log(pc.dim(`  Total deps:     ${result.totalDeps}`));
+  console.log();
+
   printSummaryBar(summary);
 
-  // Node.js version findings
   if (nodeVersionFindings.length > 0) {
     console.log();
-    console.log(chalk.bold.yellow("  ⚠  Node.js Version Vulnerabilities"));
-    console.log(chalk.dim("  ─".repeat(30)));
+    console.log(pc.bold(pc.yellow('  ⚠  Node.js Version Vulnerabilities')));
+    console.log(pc.dim('  ─'.repeat(30)));
 
     for (const f of nodeVersionFindings) {
       const sevColor = severityColor(f.severity);
-      console.log(
-        `  ${sevColor(`[${f.severity.toUpperCase()}]`)} ${chalk.white(f.cve)}`
-      );
-      console.log(`    ${chalk.dim("Type:")}      ${f.type}`);
-      console.log(`    ${chalk.dim("Current:")}   v${f.currentVersion}`);
-      console.log(`    ${chalk.dim("Patched:")}   v${f.patchedIn}`);
-      console.log(`    ${chalk.dim("Details:")}   ${f.postUrl}`);
+      console.log(`  ${sevColor(`[${f.severity.toUpperCase()}]`)} ${pc.white(f.cve)}`);
+      console.log(`    ${pc.dim('Type:')}      ${f.type}`);
+      console.log(`    ${pc.dim('Current:')}   v${f.currentVersion}`);
+      console.log(`    ${pc.dim('Patched:')}   v${f.patchedIn}`);
+      console.log(`    ${pc.dim('Details:')}   ${f.postUrl}`);
       console.log();
     }
   }
 
-  // Dependency findings
   if (dependencyFindings.length > 0) {
     console.log();
-    console.log(chalk.bold.red("  🔍 Dependency Vulnerabilities"));
-    console.log(chalk.dim("  ─".repeat(30)));
+    console.log(pc.bold(pc.red('  🔍 Dependency Vulnerabilities')));
+    console.log(pc.dim('  ─'.repeat(30)));
 
-    // Group by severity
     const grouped = groupBySeverity(dependencyFindings);
 
     for (const [severity, findings] of grouped) {
@@ -97,91 +81,87 @@ function printTerminalReport(result: CorrelationResult): void {
 
       for (const f of findings) {
         const directLabel = f.isDirect
-          ? chalk.yellow(" [direct]")
+          ? pc.yellow(' [direct]')
           : f.isPeer
-            ? chalk.magenta(" [peer]")
-            : chalk.dim(" [transitive]");
+            ? pc.magenta(' [peer]')
+            : pc.dim(' [transitive]');
 
         console.log();
         console.log(
-          `  ${sevColor("●")} ${chalk.bold.white(f.packageName)}@${chalk.dim(f.installedVersion)}${directLabel}`
+          `  ${sevColor('●')} ${pc.bold(pc.white(f.packageName))}@${pc.dim(f.installedVersion)}${directLabel}`,
         );
-        console.log(`    ${chalk.dim("ID:")}     ${f.id}`);
-        console.log(`    ${chalk.dim("Type:")}   ${f.type}`);
-        console.log(`    ${chalk.dim("Title:")}  ${f.title.slice(0, 80)}`);
+        console.log(`    ${pc.dim('ID:')}     ${f.id}`);
+        console.log(`    ${pc.dim('Type:')}   ${f.type}`);
+        console.log(`    ${pc.dim('Title:')}  ${f.title.slice(0, 80)}`);
 
         if (f.fixedIn) {
-          console.log(`    ${chalk.dim("Fix:")}    Upgrade to ${chalk.green(f.fixedIn)}`);
+          console.log(`    ${pc.dim('Fix:')}    Upgrade to ${pc.green(f.fixedIn)}`);
         } else {
-          console.log(`    ${chalk.dim("Fix:")}    ${chalk.red("No fix available")}`);
+          console.log(`    ${pc.dim('Fix:')}    ${pc.red('No fix available')}`);
         }
 
         const sourceLabels = f.sources.map((s) =>
-          s === "node-blog" ? chalk.cyan("Node.js Blog") : chalk.blue("OSV.dev")
+          s === 'node-blog' ? pc.cyan('Node.js Blog') : pc.blue('OSV.dev'),
         );
-        console.log(`    ${chalk.dim("Source:")} ${sourceLabels.join(", ")}`);
+        console.log(`    ${pc.dim('Source:')} ${sourceLabels.join(', ')}`);
       }
     }
   }
 
-  // Clean bill of health
   if (dependencyFindings.length === 0 && nodeVersionFindings.length === 0) {
     console.log();
-    console.log(chalk.bold.green("  ✅ No known vulnerabilities found!"));
-    console.log(chalk.dim("  Your dependency tree looks clean against all checked sources."));
+    console.log(pc.bold(pc.green('  ✅ No known vulnerabilities found!')));
+    console.log(pc.dim('  Your dependency tree looks clean against all checked sources.'));
   }
 
-  // Footer
   console.log();
-  console.log(chalk.dim("  ─".repeat(30)));
-  console.log(chalk.dim("  Sources: Node.js Security Blog, OSV.dev"));
-  console.log(chalk.dim("  Note: This scan is a point-in-time snapshot. New vulns may be"));
-  console.log(chalk.dim("  disclosed at any time. Run regularly for best coverage."));
+  console.log(pc.dim('  ─'.repeat(30)));
+  console.log(pc.dim('  Sources: Node.js Security Blog, OSV.dev'));
+  console.log(pc.dim('  Note: This scan is a point-in-time snapshot. New vulns may be'));
+  console.log(pc.dim('  disclosed at any time. Run regularly for best coverage.'));
   console.log();
 }
 
-function printSummaryBar(summary: CorrelationResult["summary"]): void {
+function printSummaryBar(summary: CorrelationResult['summary']): void {
   const parts = [
-    summary.critical > 0 ? chalk.bgRed.white(` ${summary.critical} CRITICAL `) : null,
-    summary.high > 0 ? chalk.bgYellow.black(` ${summary.high} HIGH `) : null,
-    summary.medium > 0 ? chalk.bgBlue.white(` ${summary.medium} MEDIUM `) : null,
-    summary.low > 0 ? chalk.bgWhite.black(` ${summary.low} LOW `) : null,
+    summary.critical > 0 ? pc.bgRed(pc.white(` ${summary.critical} CRITICAL `)) : null,
+    summary.high > 0 ? pc.bgYellow(pc.black(` ${summary.high} HIGH `)) : null,
+    summary.medium > 0 ? pc.bgBlue(pc.white(` ${summary.medium} MEDIUM `)) : null,
+    summary.low > 0 ? pc.bgWhite(pc.black(` ${summary.low} LOW `)) : null,
   ].filter(Boolean);
 
   if (parts.length > 0) {
-    console.log(`  ${parts.join(" ")}`);
+    console.log(`  ${parts.join(' ')}`);
     console.log();
     console.log(
-      chalk.dim(
+      pc.dim(
         `  ${summary.affectedDirect} direct | ` +
           `${summary.affectedTransitive} transitive | ` +
-          `${summary.affectedPeer} peer`
-      )
+          `${summary.affectedPeer} peer`,
+      ),
     );
   } else {
-    console.log(chalk.green("  No vulnerabilities found ✓"));
+    console.log(pc.green('  No vulnerabilities found ✓'));
   }
 }
 
 function severityColor(severity: string): (s: string) => string {
   switch (severity) {
-    case "Critical":
-      return chalk.red;
-    case "High":
-      return chalk.yellow;
-    case "Medium":
-      return chalk.blue;
-    case "Low":
-      return chalk.dim;
+    case 'Critical':
+      return pc.red;
+    case 'High':
+      return pc.yellow;
+    case 'Medium':
+      return pc.blue;
+    case 'Low':
+      return pc.dim;
     default:
-      return chalk.white;
+      return pc.white;
   }
 }
 
-function groupBySeverity(
-  findings: Finding[]
-): [string, Finding[]][] {
-  const order = ["Critical", "High", "Medium", "Low", "Unknown"];
+function groupBySeverity(findings: Finding[]): Array<[string, Finding[]]> {
+  const order = ['Critical', 'High', 'Medium', 'Low', 'Unknown'];
   const grouped = new Map<string, Finding[]>();
 
   for (const sev of order) {
@@ -189,7 +169,7 @@ function groupBySeverity(
   }
 
   for (const f of findings) {
-    const bucket = grouped.get(f.severity) || grouped.get("Unknown")!;
+    const bucket = grouped.get(f.severity) || grouped.get('Unknown')!;
     bucket.push(f);
   }
 

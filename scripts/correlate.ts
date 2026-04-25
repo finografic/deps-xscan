@@ -1,6 +1,7 @@
-import { ResolvedDep } from "./parse-lockfile";
-import { NodeVulnerability, ScrapedPost } from "./scrape-node-posts";
-import { OsvQueryResult } from "./query-osv";
+import semver from 'semver';
+import type { ResolvedDep } from './parse-lockfile';
+import type { OsvQueryResult } from './query-osv';
+import type { ScrapedPost } from './scrape-node-posts';
 
 export interface Finding {
   id: string; // CVE or GHSA ID
@@ -8,19 +9,19 @@ export interface Finding {
   installedVersion: string;
   isDirect: boolean;
   isPeer: boolean;
-  severity: "Critical" | "High" | "Medium" | "Low" | "Unknown";
+  severity: 'Critical' | 'High' | 'Medium' | 'Low' | 'Unknown';
   type: string;
   title: string;
   description: string;
   fixedIn: string | null;
-  sources: Array<"node-blog" | "osv">;
+  sources: Array<'node-blog' | 'osv'>;
   references: string[];
 }
 
 export interface NodeVersionFinding {
   currentVersion: string;
   cve: string;
-  severity: "Critical" | "High" | "Medium" | "Low";
+  severity: 'Critical' | 'High' | 'Medium' | 'Low';
   type: string;
   title: string;
   patchedIn: string;
@@ -47,16 +48,12 @@ export interface CorrelationResult {
 }
 
 /**
- * Cross-reference the project's Node.js version against vulnerabilities
- * found in the Node.js security blog posts.
+ * Cross-reference the project's Node.js version against vulnerabilities found in the Node.js security blog
+ * posts.
  */
-function correlateNodeVersion(
-  nodeVersion: string | null,
-  posts: ScrapedPost[]
-): NodeVersionFinding[] {
+function correlateNodeVersion(nodeVersion: string | null, posts: ScrapedPost[]): NodeVersionFinding[] {
   if (!nodeVersion) return [];
 
-  const semver = require("semver");
   const cleanVersion = semver.clean(nodeVersion);
   if (!cleanVersion) return [];
 
@@ -67,10 +64,10 @@ function correlateNodeVersion(
       // Check if the project's Node version falls in the affected range
       // The affectedVersions field is a rough semver range — try to match
       try {
-        if (vuln.affectedVersions !== "unknown") {
+        if (vuln.affectedVersions !== 'unknown') {
           // Extract version numbers from the range string
           const patchedVersion = vuln.patchedIn;
-          if (patchedVersion && patchedVersion !== "unknown") {
+          if (patchedVersion && patchedVersion !== 'unknown') {
             // If our version is less than the patched version and in the same major line
             const cleanPatched = semver.clean(patchedVersion);
             if (
@@ -100,13 +97,13 @@ function correlateNodeVersion(
 }
 
 /**
- * Cross-reference OSV results against the project's dependency tree.
- * Merge with any matching CVEs from Node.js blog posts for dep-level vulns.
+ * Cross-reference OSV results against the project's dependency tree. Merge with any matching CVEs from
+ * Node.js blog posts for dep-level vulns.
  */
 function correlateDependencies(
   deps: ResolvedDep[],
   osvResults: OsvQueryResult[],
-  posts: ScrapedPost[]
+  posts: ScrapedPost[],
 ): Finding[] {
   const findingsMap = new Map<string, Finding>();
 
@@ -126,7 +123,7 @@ function correlateDependencies(
 
       if (findingsMap.has(findingId)) {
         // Already tracked — just add source
-        findingsMap.get(findingId)!.sources.push("osv");
+        findingsMap.get(findingId)!.sources.push('osv');
         continue;
       }
 
@@ -136,12 +133,12 @@ function correlateDependencies(
         installedVersion: osvResult.packageVersion,
         isDirect: dep?.isDirect ?? false,
         isPeer: dep?.isPeer ?? false,
-        severity: vuln.severity === "Unknown" ? "Medium" : vuln.severity,
-        type: classifyFromDescription(vuln.summary + " " + vuln.details),
+        severity: vuln.severity === 'Unknown' ? 'Medium' : vuln.severity,
+        type: classifyFromDescription(vuln.summary + ' ' + vuln.details),
         title: vuln.summary || vuln.id,
         description: vuln.details.slice(0, 300),
         fixedIn: vuln.fixedIn,
-        sources: ["osv"],
+        sources: ['osv'],
         references: vuln.references,
       });
 
@@ -151,8 +148,8 @@ function correlateDependencies(
           for (const nodeVuln of post.vulnerabilities) {
             if (nodeVuln.cve === alias || nodeVuln.cve === vuln.id) {
               const existing = findingsMap.get(findingId)!;
-              if (!existing.sources.includes("node-blog")) {
-                existing.sources.push("node-blog");
+              if (!existing.sources.includes('node-blog')) {
+                existing.sources.push('node-blog');
               }
               // Upgrade severity if node blog rates it higher
               existing.severity = higherSeverity(existing.severity, nodeVuln.severity);
@@ -171,40 +168,37 @@ function correlateDependencies(
  */
 function classifyFromDescription(text: string): string {
   const lower = text.toLowerCase();
-  const patterns: [string, string][] = [
-    ["prototype pollution", "Prototype Pollution"],
-    ["denial of service", "Denial of Service"],
-    ["redos", "ReDoS"],
-    ["regular expression", "ReDoS"],
-    ["xss", "Cross-Site Scripting"],
-    ["cross-site scripting", "Cross-Site Scripting"],
-    ["code injection", "Code Injection"],
-    ["command injection", "Command Injection"],
-    ["sql injection", "SQL Injection"],
-    ["path traversal", "Path Traversal"],
-    ["directory traversal", "Path Traversal"],
-    ["buffer overflow", "Buffer Overflow"],
-    ["remote code", "Remote Code Execution"],
-    ["arbitrary code", "Remote Code Execution"],
-    ["privilege escalation", "Privilege Escalation"],
-    ["authentication bypass", "Authentication Bypass"],
-    ["information disclosure", "Information Disclosure"],
-    ["information exposure", "Information Disclosure"],
-    ["open redirect", "Open Redirect"],
-    ["ssrf", "Server-Side Request Forgery"],
-    ["csrf", "Cross-Site Request Forgery"],
+  const patterns: Array<[string, string]> = [
+    ['prototype pollution', 'Prototype Pollution'],
+    ['denial of service', 'Denial of Service'],
+    ['redos', 'ReDoS'],
+    ['regular expression', 'ReDoS'],
+    ['xss', 'Cross-Site Scripting'],
+    ['cross-site scripting', 'Cross-Site Scripting'],
+    ['code injection', 'Code Injection'],
+    ['command injection', 'Command Injection'],
+    ['sql injection', 'SQL Injection'],
+    ['path traversal', 'Path Traversal'],
+    ['directory traversal', 'Path Traversal'],
+    ['buffer overflow', 'Buffer Overflow'],
+    ['remote code', 'Remote Code Execution'],
+    ['arbitrary code', 'Remote Code Execution'],
+    ['privilege escalation', 'Privilege Escalation'],
+    ['authentication bypass', 'Authentication Bypass'],
+    ['information disclosure', 'Information Disclosure'],
+    ['information exposure', 'Information Disclosure'],
+    ['open redirect', 'Open Redirect'],
+    ['ssrf', 'Server-Side Request Forgery'],
+    ['csrf', 'Cross-Site Request Forgery'],
   ];
 
   for (const [pattern, label] of patterns) {
     if (lower.includes(pattern)) return label;
   }
-  return "Other";
+  return 'Other';
 }
 
-function higherSeverity(
-  a: Finding["severity"],
-  b: Finding["severity"]
-): Finding["severity"] {
+function higherSeverity(a: Finding['severity'], b: Finding['severity']): Finding['severity'] {
   const rank: Record<string, number> = {
     Critical: 4,
     High: 3,
@@ -222,7 +216,7 @@ export function correlate(
   deps: ResolvedDep[],
   nodeVersion: string | null,
   posts: ScrapedPost[],
-  osvResults: OsvQueryResult[]
+  osvResults: OsvQueryResult[],
 ): CorrelationResult {
   const nodeVersionFindings = correlateNodeVersion(nodeVersion, posts);
   const dependencyFindings = correlateDependencies(deps, osvResults, posts);
@@ -245,11 +239,11 @@ export function correlate(
   });
 
   const summary = {
-    critical: dependencyFindings.filter((f) => f.severity === "Critical").length,
-    high: dependencyFindings.filter((f) => f.severity === "High").length,
-    medium: dependencyFindings.filter((f) => f.severity === "Medium").length,
-    low: dependencyFindings.filter((f) => f.severity === "Low").length,
-    unknown: dependencyFindings.filter((f) => f.severity === "Unknown").length,
+    critical: dependencyFindings.filter((f) => f.severity === 'Critical').length,
+    high: dependencyFindings.filter((f) => f.severity === 'High').length,
+    medium: dependencyFindings.filter((f) => f.severity === 'Medium').length,
+    low: dependencyFindings.filter((f) => f.severity === 'Low').length,
+    unknown: dependencyFindings.filter((f) => f.severity === 'Unknown').length,
     total: dependencyFindings.length,
     affectedDirect: dependencyFindings.filter((f) => f.isDirect).length,
     affectedTransitive: dependencyFindings.filter((f) => !f.isDirect && !f.isPeer).length,

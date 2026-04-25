@@ -16,6 +16,7 @@ export default defineConfig({
   ...base,
   ...sorting,
   overrides: [
+    { files: ['scripts/**/*.ts'], excludeFiles: [], options: { ...base, ...sorting, jsdoc: false } },
     { files: ['*.json', '*.jsonc'], excludeFiles: [], options: { ...json } },
     {
       files: ['*.md', '*.mdx'],

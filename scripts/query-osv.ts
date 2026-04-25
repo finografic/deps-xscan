@@ -1,10 +1,13 @@
-import { getCached, setCache, CacheOptions } from "./cache";
+import type { CacheOptions } from './cache';
+
+import { getCached, setCache } from './cache';
+import { isCliMain } from './is-cli-main';
 
 export interface OsvVulnerability {
   id: string; // e.g. "GHSA-xxxx-xxxx-xxxx" or "CVE-2024-xxxxx"
   summary: string;
   details: string;
-  severity: "Critical" | "High" | "Medium" | "Low" | "Unknown";
+  severity: 'Critical' | 'High' | 'Medium' | 'Low' | 'Unknown';
   aliases: string[]; // cross-references (CVE ↔ GHSA)
   affectedVersions: string;
   fixedIn: string | null;
@@ -19,8 +22,8 @@ export interface OsvQueryResult {
   vulnerabilities: OsvVulnerability[];
 }
 
-const OSV_API_BASE = "https://api.osv.dev/v1";
-const CACHE_KEY_PREFIX = "osv-query";
+const OSV_API_BASE = 'https://api.osv.dev/v1';
+const CACHE_KEY_PREFIX = 'osv-query';
 
 /**
  * Query OSV.dev for vulnerabilities affecting a single package version.
@@ -28,22 +31,22 @@ const CACHE_KEY_PREFIX = "osv-query";
 export async function queryOsvSingle(
   name: string,
   version: string,
-  cacheOpts: Partial<CacheOptions> = {}
+  cacheOpts: Partial<CacheOptions> = {},
 ): Promise<OsvQueryResult> {
   const cacheKey = `${CACHE_KEY_PREFIX}-${name}@${version}`;
   const cached = getCached<OsvQueryResult>(cacheKey, cacheOpts);
   if (cached) return cached;
 
-  const fetch = (await import("node-fetch")).default;
+  const fetch = (await import('node-fetch')).default;
 
   const res = await fetch(`${OSV_API_BASE}/query`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       version,
       package: {
         name,
-        ecosystem: "npm",
+        ecosystem: 'npm',
       },
     }),
   });
@@ -67,14 +70,14 @@ export async function queryOsvSingle(
 }
 
 /**
- * Batch query OSV.dev for multiple packages.
- * OSV supports batch via /v1/querybatch — more efficient than individual calls.
+ * Batch query OSV.dev for multiple packages. OSV supports batch via /v1/querybatch — more efficient than
+ * individual calls.
  */
 export async function queryOsvBatch(
   packages: Array<{ name: string; version: string }>,
-  cacheOpts: Partial<CacheOptions> = {}
+  cacheOpts: Partial<CacheOptions> = {},
 ): Promise<OsvQueryResult[]> {
-  const fetch = (await import("node-fetch")).default;
+  const fetch = (await import('node-fetch')).default;
 
   // Check cache first, split into cached vs uncached
   const results: OsvQueryResult[] = [];
@@ -96,9 +99,7 @@ export async function queryOsvBatch(
     return results;
   }
 
-  console.log(
-    `[osv] Querying ${uncached.length} packages (${packages.length - uncached.length} cached)`
-  );
+  console.log(`[osv] Querying ${uncached.length} packages (${packages.length - uncached.length} cached)`);
 
   // Batch in chunks of 100 (OSV batch limit)
   const BATCH_SIZE = 100;
@@ -107,13 +108,13 @@ export async function queryOsvBatch(
 
     const queries = chunk.map(({ name, version }) => ({
       version,
-      package: { name, ecosystem: "npm" },
+      package: { name, ecosystem: 'npm' },
     }));
 
     try {
       const res = await fetch(`${OSV_API_BASE}/querybatch`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ queries }),
       });
 
@@ -167,13 +168,13 @@ function parseOsvVuln(raw: any): OsvVulnerability {
   const affected = raw.affected?.[0] || {};
   const ranges = affected.ranges || [];
   const fixedVersions: string[] = [];
-  let affectedRange = "";
+  let affectedRange = '';
 
   for (const range of ranges) {
     for (const event of range.events || []) {
       if (event.fixed) fixedVersions.push(event.fixed);
       if (event.introduced) {
-        affectedRange += (affectedRange ? ", " : "") + `>= ${event.introduced}`;
+        affectedRange += (affectedRange ? ', ' : '') + `>= ${event.introduced}`;
       }
     }
   }
@@ -183,60 +184,60 @@ function parseOsvVuln(raw: any): OsvVulnerability {
   }
 
   return {
-    id: raw.id || "unknown",
-    summary: raw.summary || "",
-    details: (raw.details || "").slice(0, 500),
+    id: raw.id || 'unknown',
+    summary: raw.summary || '',
+    details: (raw.details || '').slice(0, 500),
     severity,
     aliases: raw.aliases || [],
-    affectedVersions: affectedRange || "unknown",
+    affectedVersions: affectedRange || 'unknown',
     fixedIn: fixedVersions.length > 0 ? fixedVersions[fixedVersions.length - 1] : null,
     references: (raw.references || []).map((r: any) => r.url).slice(0, 5),
-    published: raw.published || "",
-    modified: raw.modified || "",
+    published: raw.published || '',
+    modified: raw.modified || '',
   };
 }
 
 /**
  * Extract severity from OSV CVSS data or database-specific severity.
  */
-function extractSeverity(raw: any): OsvVulnerability["severity"] {
+function extractSeverity(raw: any): OsvVulnerability['severity'] {
   // Check database_specific severity
   const dbSeverity = raw.database_specific?.severity;
   if (dbSeverity) {
     const upper = dbSeverity.toUpperCase();
-    if (upper === "CRITICAL") return "Critical";
-    if (upper === "HIGH") return "High";
-    if (upper === "MODERATE" || upper === "MEDIUM") return "Medium";
-    if (upper === "LOW") return "Low";
+    if (upper === 'CRITICAL') return 'Critical';
+    if (upper === 'HIGH') return 'High';
+    if (upper === 'MODERATE' || upper === 'MEDIUM') return 'Medium';
+    if (upper === 'LOW') return 'Low';
   }
 
   // Check CVSS score from severity array
   const severityEntries = raw.severity || [];
   for (const entry of severityEntries) {
     if (entry.score !== undefined) {
-      if (entry.score >= 9.0) return "Critical";
-      if (entry.score >= 7.0) return "High";
-      if (entry.score >= 4.0) return "Medium";
-      return "Low";
+      if (entry.score >= 9.0) return 'Critical';
+      if (entry.score >= 7.0) return 'High';
+      if (entry.score >= 4.0) return 'Medium';
+      return 'Low';
     }
     // Try parsing from CVSS vector string
-    if (entry.type === "CVSS_V3" && entry.score === undefined) {
+    if (entry.type === 'CVSS_V3' && entry.score === undefined) {
       // Rough extraction from vector — look for base score
       const scoreMatch = entry.vector?.match(/CVSS:3\.\d\/.*?/);
       if (scoreMatch) continue; // Can't easily extract numeric score from vector alone
     }
   }
 
-  return "Unknown";
+  return 'Unknown';
 }
 
 // CLI entry point
-if (require.main === module) {
+if (isCliMain(import.meta.url)) {
   const name = process.argv[2];
   const version = process.argv[3];
 
   if (!name || !version) {
-    console.error("Usage: query-osv.ts <package-name> <version>");
+    console.error('Usage: query-osv.ts <package-name> <version>');
     process.exit(1);
   }
 

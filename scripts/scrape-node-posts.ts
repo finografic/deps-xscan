@@ -1,10 +1,13 @@
-import { getCached, setCache, CacheOptions } from "./cache";
+import type { CacheOptions } from './cache';
+
+import { getCached, setCache } from './cache';
+import { isCliMain } from './is-cli-main';
 
 export interface NodeVulnerability {
   cve: string;
   title: string;
   description: string;
-  severity: "Critical" | "High" | "Medium" | "Low";
+  severity: 'Critical' | 'High' | 'Medium' | 'Low';
   type: string; // e.g. "HTTP Request Smuggling", "Buffer Overflow", "DNS Rebinding"
   affectedVersions: string; // semver range like ">=18.0.0 <18.19.1"
   patchedIn: string; // version where fix landed
@@ -19,17 +22,16 @@ export interface ScrapedPost {
   vulnerabilities: NodeVulnerability[];
 }
 
-const NODE_BLOG_BASE = "https://nodejs.org/en/blog";
-const NODE_BLOG_VULN_FEED = "https://nodejs.org/en/blog/vulnerability";
+const NODE_BLOG_VULN_FEED = 'https://nodejs.org/en/blog/vulnerability';
 
-const CACHE_KEY_PREFIX = "node-security-posts";
+const CACHE_KEY_PREFIX = 'node-security-posts';
 
 /**
- * Fetch the list of recent Node.js security release blog post URLs.
- * Returns up to `count` post URLs, most recent first.
+ * Fetch the list of recent Node.js security release blog post URLs. Returns up to `count` post URLs, most
+ * recent first.
  */
 export async function fetchSecurityPostUrls(count: number = 5): Promise<string[]> {
-  const fetch = (await import("node-fetch")).default;
+  const fetch = (await import('node-fetch')).default;
 
   // The Node.js blog vulnerability page lists security advisories
   const res = await fetch(NODE_BLOG_VULN_FEED);
@@ -51,11 +53,10 @@ export async function fetchSecurityPostUrls(count: number = 5): Promise<string[]
 }
 
 /**
- * Fetch and parse a single Node.js security blog post.
- * Returns raw HTML content for LLM-assisted extraction.
+ * Fetch and parse a single Node.js security blog post. Returns raw HTML content for LLM-assisted extraction.
  */
 export async function fetchPostContent(url: string): Promise<string> {
-  const fetch = (await import("node-fetch")).default;
+  const fetch = (await import('node-fetch')).default;
   const res = await fetch(url);
   return res.text();
 }
@@ -63,15 +64,10 @@ export async function fetchPostContent(url: string): Promise<string> {
 /**
  * Extract structured vulnerability data from a blog post's HTML.
  *
- * This function does basic regex extraction for well-formatted posts.
- * For ambiguous or inconsistent formatting, the orchestrator should
- * pass the raw HTML to the LLM for structured extraction.
+ * This function does basic regex extraction for well-formatted posts. For ambiguous or inconsistent
+ * formatting, the orchestrator should pass the raw HTML to the LLM for structured extraction.
  */
-export function extractVulnsFromHtml(
-  html: string,
-  postUrl: string,
-  postDate: string
-): NodeVulnerability[] {
+export function extractVulnsFromHtml(html: string, postUrl: string, postDate: string): NodeVulnerability[] {
   const vulns: NodeVulnerability[] = [];
 
   // Extract CVEs — most posts list them explicitly
@@ -79,12 +75,12 @@ export function extractVulnsFromHtml(
   const cves = [...new Set(html.match(cvePattern) || [])];
 
   // Extract severity indicators
-  const severityMap: Record<string, NodeVulnerability["severity"]> = {
-    critical: "Critical",
-    high: "High",
-    medium: "Medium",
-    moderate: "Medium",
-    low: "Low",
+  const severityMap: Record<string, NodeVulnerability['severity']> = {
+    critical: 'Critical',
+    high: 'High',
+    medium: 'Medium',
+    moderate: 'Medium',
+    low: 'Low',
   };
 
   // Try to extract structured sections for each CVE
@@ -99,10 +95,10 @@ export function extractVulnsFromHtml(
     const context = html.slice(start, end);
 
     // Strip HTML tags for text analysis
-    const textContext = context.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+    const textContext = context.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
 
     // Detect severity
-    let severity: NodeVulnerability["severity"] = "Medium";
+    let severity: NodeVulnerability['severity'] = 'Medium';
     for (const [keyword, level] of Object.entries(severityMap)) {
       if (textContext.toLowerCase().includes(keyword)) {
         severity = level;
@@ -120,8 +116,8 @@ export function extractVulnsFromHtml(
       description: textContext.slice(0, 300).trim(),
       severity,
       type: classifyVulnType(textContext),
-      affectedVersions: versions.length > 0 ? `< ${versions[versions.length - 1]}` : "unknown",
-      patchedIn: versions.length > 0 ? versions[versions.length - 1] : "unknown",
+      affectedVersions: versions.length > 0 ? `< ${versions[versions.length - 1]}` : 'unknown',
+      patchedIn: versions.length > 0 ? versions[versions.length - 1] : 'unknown',
       postUrl,
       postDate,
     });
@@ -145,61 +141,60 @@ function extractTitle(text: string, cve: string): string {
 }
 
 /**
- * Basic heuristic classification of vulnerability type.
- * The LLM integration point can refine this significantly.
+ * Basic heuristic classification of vulnerability type. The LLM integration point can refine this
+ * significantly.
  */
 function classifyVulnType(text: string): string {
   const lower = text.toLowerCase();
-  const typeMap: [string, string][] = [
-    ["http request smuggling", "HTTP Request Smuggling"],
-    ["http smuggling", "HTTP Request Smuggling"],
-    ["buffer overflow", "Buffer Overflow"],
-    ["buffer over-read", "Buffer Over-read"],
-    ["dns rebinding", "DNS Rebinding"],
-    ["dns rebind", "DNS Rebinding"],
-    ["path traversal", "Path Traversal"],
-    ["directory traversal", "Path Traversal"],
-    ["denial of service", "Denial of Service"],
-    ["denial-of-service", "Denial of Service"],
-    ["dos", "Denial of Service"],
-    ["prototype pollution", "Prototype Pollution"],
-    ["code injection", "Code Injection"],
-    ["remote code execution", "Remote Code Execution"],
-    ["rce", "Remote Code Execution"],
-    ["privilege escalation", "Privilege Escalation"],
-    ["permission", "Permission Bypass"],
-    ["bypass", "Security Bypass"],
-    ["memory leak", "Memory Leak"],
-    ["use after free", "Use After Free"],
-    ["integer overflow", "Integer Overflow"],
-    ["race condition", "Race Condition"],
-    ["timing attack", "Timing Attack"],
-    ["side channel", "Side Channel Attack"],
-    ["certificate", "Certificate Validation"],
-    ["tls", "TLS/SSL Issue"],
-    ["ssl", "TLS/SSL Issue"],
-    ["xss", "Cross-Site Scripting"],
-    ["cross-site", "Cross-Site Scripting"],
-    ["header injection", "Header Injection"],
-    ["crlf", "CRLF Injection"],
-    ["regex", "ReDoS"],
-    ["redos", "ReDoS"],
+  const typeMap: Array<[string, string]> = [
+    ['http request smuggling', 'HTTP Request Smuggling'],
+    ['http smuggling', 'HTTP Request Smuggling'],
+    ['buffer overflow', 'Buffer Overflow'],
+    ['buffer over-read', 'Buffer Over-read'],
+    ['dns rebinding', 'DNS Rebinding'],
+    ['dns rebind', 'DNS Rebinding'],
+    ['path traversal', 'Path Traversal'],
+    ['directory traversal', 'Path Traversal'],
+    ['denial of service', 'Denial of Service'],
+    ['denial-of-service', 'Denial of Service'],
+    ['dos', 'Denial of Service'],
+    ['prototype pollution', 'Prototype Pollution'],
+    ['code injection', 'Code Injection'],
+    ['remote code execution', 'Remote Code Execution'],
+    ['rce', 'Remote Code Execution'],
+    ['privilege escalation', 'Privilege Escalation'],
+    ['permission', 'Permission Bypass'],
+    ['bypass', 'Security Bypass'],
+    ['memory leak', 'Memory Leak'],
+    ['use after free', 'Use After Free'],
+    ['integer overflow', 'Integer Overflow'],
+    ['race condition', 'Race Condition'],
+    ['timing attack', 'Timing Attack'],
+    ['side channel', 'Side Channel Attack'],
+    ['certificate', 'Certificate Validation'],
+    ['tls', 'TLS/SSL Issue'],
+    ['ssl', 'TLS/SSL Issue'],
+    ['xss', 'Cross-Site Scripting'],
+    ['cross-site', 'Cross-Site Scripting'],
+    ['header injection', 'Header Injection'],
+    ['crlf', 'CRLF Injection'],
+    ['regex', 'ReDoS'],
+    ['redos', 'ReDoS'],
   ];
 
   for (const [pattern, label] of typeMap) {
     if (lower.includes(pattern)) return label;
   }
 
-  return "Other";
+  return 'Other';
 }
 
 /**
- * Main entry: scrape the last N Node.js security posts.
- * Uses cache with configurable TTL.
+ * Main entry: scrape the last N Node.js security posts. Uses cache with configurable TTL.
  */
 export async function scrapeNodeSecurityPosts(
   count: number = 5,
-  cacheOpts: Partial<CacheOptions> = {}
+  cacheOpts: Partial<CacheOptions> = {},
 ): Promise<ScrapedPost[]> {
   const cacheKey = `${CACHE_KEY_PREFIX}-${count}`;
   const cached = getCached<ScrapedPost[]>(cacheKey, cacheOpts);
@@ -220,11 +215,11 @@ export async function scrapeNodeSecurityPosts(
 
     // Extract date from URL or content
     const dateMatch = url.match(/(\w+-\d{4})/);
-    const postDate = dateMatch ? dateMatch[1] : "unknown";
+    const postDate = dateMatch ? dateMatch[1] : 'unknown';
 
     // Extract title from <title> or <h1>
     const titleMatch = html.match(/<title>([^<]+)<\/title>/i);
-    const title = titleMatch ? titleMatch[1].trim() : url.split("/").pop() || url;
+    const title = titleMatch ? titleMatch[1].trim() : url.split('/').pop() || url;
 
     const vulns = extractVulnsFromHtml(html, url, postDate);
 
@@ -241,8 +236,8 @@ export async function scrapeNodeSecurityPosts(
 }
 
 // CLI entry point
-if (require.main === module) {
-  const count = parseInt(process.argv[2] || "5", 10);
+if (isCliMain(import.meta.url)) {
+  const count = parseInt(process.argv[2] || '5', 10);
   scrapeNodeSecurityPosts(count)
     .then((posts) => {
       console.log(JSON.stringify(posts, null, 2));
