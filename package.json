@@ -1,7 +1,7 @@
 {
   "name": "@finografic/deps-xscan",
   "version": "0.2.0",
-  "private": true,
+  "private": false,
   "description": "Dependency security x-scan: cross-checks your resolved dependency tree against OSV, Node.js advisories, and GitHub Advisory data.",
   "keywords": [
     "cli",
@@ -23,7 +23,7 @@
     "url": "git+https://github.com/finografic/deps-xscan.git"
   },
   "bin": {
-    "deps-xscan": "./dist/index.mjs"
+    "xscan": "./dist/index.mjs"
   },
   "files": [
     "dist"

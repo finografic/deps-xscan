@@ -10,7 +10,7 @@ import {
 } from 'node:fs';
 import { join } from 'node:path';
 
-const CACHE_DIR = join(process.env.HOME || '/tmp', '.dep-tree-scanner-cache');
+const CACHE_DIR = join(process.env.HOME || '/tmp', '.deps-xscan-cache');
 
 export interface CacheOptions {
   ttlHours: number;

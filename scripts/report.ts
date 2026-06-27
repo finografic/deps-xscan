@@ -36,7 +36,7 @@ function printTerminalReport(result: CorrelationResult): void {
   console.log(pc.bold(pc.white('╔══════════════════════════════════════════════════════╗')));
   console.log(
     pc.bold(pc.white('║')) +
-      pc.bold(pc.cyan('  dep-tree-scanner — Security Report')) +
+      pc.bold(pc.cyan('  deps-xscan — Security Report')) +
       pc.bold(pc.white('                 ║')),
   );
   console.log(pc.bold(pc.white('╚══════════════════════════════════════════════════════╝')));

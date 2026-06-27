@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 /* oxfmt-ignore */
 /**
- * dep-tree-scanner orchestrator
+ * deps-xscan orchestrator
  *
  * Coordinates the full scan pipeline:
  *   1. Parse lockfile → resolved deps
@@ -92,7 +92,7 @@ function parseArgs(): CliArgs {
 
 function printHelp(): void {
   console.log(`
-dep-tree-scanner — Deep dependency security analysis
+deps-xscan — Deep dependency security analysis
 
 Usage:
   npx tsx scripts/orchestrator.ts [options]
