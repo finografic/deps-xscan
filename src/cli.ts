@@ -1,3 +1,3 @@
 #!/usr/bin/env node
 
-console.log('Hello from dep-scan!');
+console.log('Hello from deps-xscan!');

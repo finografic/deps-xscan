@@ -22,7 +22,7 @@ export function generateReport(
       writeFileSync(jsonOutputPath, jsonOutput, 'utf-8');
       console.log(`\n${pc.dim(`JSON report saved to: ${jsonOutputPath}`)}`);
     } else {
-      const defaultPath = 'dep-scan-report.json';
+      const defaultPath = 'deps-xscan-report.json';
       writeFileSync(defaultPath, jsonOutput, 'utf-8');
       console.log(`\n${pc.dim(`JSON report saved to: ${defaultPath}`)}`);
     }

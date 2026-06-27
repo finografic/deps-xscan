@@ -10,7 +10,7 @@ build/
 .dep-tree-scanner-cache/
 
 # Report outputs
-dep-scan-report.json
+deps-xscan-report.json
 
 # Environment files
 .env

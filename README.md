@@ -1,26 +1,26 @@
-# @finografic/dep-scan
+# @finografic/deps-xscan
 
 > Dependency-tree security scanner that analyses your real dependency graph against OSV and Node.js advisories to surface actual runtime risk.
 
 ## Installation
 
 ```bash
-pnpm add -g @finografic/dep-scan
+pnpm add -g @finografic/deps-xscan
 ```
 
 ## Usage
 
 ```bash
-dep-scan                          # scan current directory
-dep-scan --project ./my-app       # scan a specific project
-dep-scan --verbose                # show per-stage progress
-dep-scan --no-cache               # force fresh fetch of all data sources
-dep-scan --format json --json-out report.json
+deps-xscan                          # scan current directory
+deps-xscan --project ./my-app       # scan a specific project
+deps-xscan --verbose                # show per-stage progress
+deps-xscan --no-cache               # force fresh fetch of all data sources
+deps-xscan --format json --json-out report.json
 ```
 
 ## What it does
 
-Unlike `npm audit`, `dep-scan` cross-references your resolved lockfile against three sources:
+Unlike `npm audit`, `deps-xscan` cross-references your resolved lockfile against three sources:
 
 - **OSV.dev** — open, comprehensive vulnerability database, queried per resolved dep version
 - **Node.js security blog** — last N release posts scraped and parsed for CVEs, matched against your engine version

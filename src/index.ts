@@ -1,3 +1,3 @@
 export const hello = (): string => {
-  return 'Hello from @finografic/dep-scan!';
+  return 'Hello from @finografic/deps-xscan!';
 };

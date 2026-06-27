@@ -1,14 +1,14 @@
 ---
 name: dep-tree-scanner
 description: >
-  Skill for the `dep-scan` CLI tool (@finografic/dep-scan). Performs deep dependency
+  Skill for the `deps-xscan` CLI tool (@finografic/deps-xscan). Performs deep dependency
   security analysis by cross-referencing a project's actual lockfile dependency tree
   against Node.js security advisory blog posts, OSV.dev, and optionally Snyk. Goes far
   beyond `npm audit` by scraping the last N Node.js security release posts, extracting
   CVEs, categorizing them by type and severity, and matching them against every dep and
   peerDep in the lockfile — plus checking the project's Node.js engine version itself.
 
-  Trigger this skill whenever the user wants to: run dep-scan, audit dependencies for
+  Trigger this skill whenever the user wants to: run deps-xscan, audit dependencies for
   security issues, scan a lockfile for vulnerabilities, check if their Node.js version
   has unpatched CVEs, cross-reference deps against real-world advisories, or get a
   security posture report for a JS/TS project. Also trigger on: "dep scan", "dependency
@@ -17,25 +17,25 @@ description: >
 
 # dep-tree-scanner
 
-Skill for `dep-scan` — a published CLI tool (`@finografic/dep-scan`) that performs deep
+Skill for `deps-xscan` — a published CLI tool (`@finografic/deps-xscan`) that performs deep
 dependency security analysis by combining data sources that typical tools check in isolation.
 
 ## Package identity
 
 ```
-package:   @finografic/dep-scan
-bin:       dep-scan
-repo:      ~/repos-p/dep-scan/
+package:   @finografic/deps-xscan
+bin:       deps-xscan
+repo:      ~/repos-p/deps-xscan/
 skill:     ~/.claude/skills/dep-tree-scanner/   ← you are here
 ```
 
 ## Repo structure (for reference)
 
 ```
-dep-scan/
+deps-xscan/
 ├── src/
 │   ├── cli.ts                        # CLI entrypoint — parses argv, calls orchestrator
-│   ├── dep-scan.help.ts              # Help text
+│   ├── deps-xscan.help.ts              # Help text
 │   └── index.ts                      # Public API surface
 ├── scripts/                          # Internal pipeline stages (not part of built output)
 │   ├── orchestrator.ts               # Coordinates all stages
@@ -57,14 +57,14 @@ The tool is used as a global or project-local CLI bin:
 
 ```bash
 # Global install
-pnpm add -g @finografic/dep-scan
+pnpm add -g @finografic/deps-xscan
 
 # Run against a project
-dep-scan                                      # scans cwd
-dep-scan --project ./path/to/app              # specific project
-dep-scan --format json --json-out report.json # JSON only
-dep-scan --no-cache --verbose                 # fresh fetch, full logging
-dep-scan --node-posts 10                      # check last 10 Node.js security posts
+deps-xscan                                      # scans cwd
+deps-xscan --project ./path/to/app              # specific project
+deps-xscan --format json --json-out report.json # JSON only
+deps-xscan --no-cache --verbose                 # fresh fetch, full logging
+deps-xscan --node-posts 10                      # check last 10 Node.js security posts
 ```
 
 ## CLI flags
@@ -82,14 +82,17 @@ dep-scan --node-posts 10                      # check last 10 Node.js security p
 ## Pipeline stages
 
 ### Stage 1 — Parse lockfile (`parse-lockfile.ts`)
+
 Auto-detects `package-lock.json` (npm v2/v3) or `pnpm-lock.yaml`. Extracts every resolved
 dependency including peerDeps as `{ name, version, isDirect, isPeer }`.
 
 ### Stage 2 — Detect Node.js version
+
 Reads `.nvmrc`, `.node-version`, `package.json#engines.node`, or falls back to the
 runtime's `node --version`.
 
 ### Stage 3 — Scrape Node.js security posts (`scrape-node-posts.ts`)
+
 Fetches the last N posts from the Node.js vulnerability blog. Cached at `~/.dep-tree-scanner-cache/`
 with a 24h TTL. Extracts CVEs, severity, affected version ranges, and vuln type.
 
@@ -98,15 +101,18 @@ LLM to parse ambiguous HTML sections and extract structured data. See the prompt
 in `docs/spec/severity-taxonomy.md` inside the repo.
 
 ### Stage 4 — Query OSV.dev (`query-osv.ts`)
+
 Batch-queries `api.osv.dev/v1/querybatch` for all resolved deps. Results cached with the
 same TTL. Falls back to individual queries if batch fails.
 
 ### Stage 5 — Correlate (`correlate.ts`)
+
 Merges all sources: matches Node.js blog CVEs against the project Node version, matches
 OSV results against resolved dep versions, deduplicates cross-source matches, categorizes
 by severity and type.
 
 ### Stage 6 — Report (`report.ts`)
+
 Outputs terminal (chalk-styled, grouped by severity, with upgrade paths) and/or JSON.
 Exits with code `1` if any Critical or High findings — useful for CI gating.
 
@@ -115,14 +121,14 @@ Exits with code `1` if any Critical or High findings — useful for CI gating.
 When this skill is triggered:
 
 1. Confirm the target project path (cwd is fine if the user is already in the project)
-2. Check if `dep-scan` is installed: `dep-scan --version`
-   - If not found: `pnpm add -g @finografic/dep-scan`
-3. Run the scan: `dep-scan --project <path> --verbose`
+2. Check if `deps-xscan` is installed: `deps-xscan --version`
+   - If not found: `pnpm add -g @finografic/deps-xscan`
+3. Run the scan: `deps-xscan --project <path> --verbose`
 4. If findings exist, parse the JSON report and synthesize a **risk summary**:
    - Lead with Critical and High, direct deps first
    - Note whether an upgrade path exists (`fixedIn` field)
    - Flag transitive vulns that require the direct dep to bump its own dependency
-5. Offer to export JSON: `dep-scan --format json --json-out dep-scan-report.json`
+5. Offer to export JSON: `deps-xscan --format json --json-out deps-xscan-report.json`
 
 ## LLM integration points
 
