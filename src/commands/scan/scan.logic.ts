@@ -44,7 +44,7 @@ function log(msg: string, verbose: boolean): void {
 }
 
 function shouldUseSpinners(verbose: boolean): boolean {
-  return Boolean(process.stdout.isTTY) && !verbose;
+  return (process.stdout.isTTY ?? false) && !verbose;
 }
 
 function sourceErrorMessage(error: unknown): string {

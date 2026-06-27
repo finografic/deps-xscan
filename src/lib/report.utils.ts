@@ -232,10 +232,10 @@ function formatDependencyPaths(finding: Finding): string {
 
 function printSummaryBar(summary: CorrelationResult['summary']): void {
   const parts = [
-    summary.critical > 0 ? pc.bgRed(pc.white(` ${summary.critical} CRITICAL `)) : null,
-    summary.high > 0 ? pc.bgYellow(pc.black(` ${summary.high} HIGH `)) : null,
-    summary.medium > 0 ? pc.bgCyan(pc.white(` ${summary.medium} MEDIUM `)) : null,
-    summary.low > 0 ? pc.bgWhite(pc.black(` ${summary.low} LOW `)) : null,
+    summary.critical > 0 ? summaryBadge('41', '37', `${summary.critical} CRITICAL`) : null,
+    summary.high > 0 ? summaryBadge('43', '30', `${summary.high} HIGH`) : null,
+    summary.medium > 0 ? summaryBadge('46', '30', `${summary.medium} MEDIUM`) : null,
+    summary.low > 0 ? summaryBadge('47', '30', `${summary.low} LOW`) : null,
   ].filter(Boolean);
 
   if (parts.length > 0) {
@@ -251,6 +251,12 @@ function printSummaryBar(summary: CorrelationResult['summary']): void {
   } else {
     console.log(pc.green('  No vulnerabilities found ✓'));
   }
+}
+
+/** Picocolors nests fg reset before bg close; explicit SGR keeps black on cyan legible. */
+function summaryBadge(bg: string, fg: string, label: string): string {
+  if (!pc.isColorSupported) return ` ${label} `;
+  return `\x1b[${bg}m\x1b[${fg}m ${label} \x1b[0m`;
 }
 
 function printSeveritySectionHeader(severity: string, count: number): void {

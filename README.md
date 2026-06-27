@@ -8,7 +8,7 @@
 > - GitHub Advisory Database
 > - optional Dependabot alerts
 
-![deps-xscan](./docs/deps-xscan.gif)
+<img alt="deps-xscan demo" src="./docs/deps-xscan.gif" width="988" />
 
 `xscan` is built for the gap between “this package exists somewhere in my tree” and “what should I actually do about it?”
 It reports findings against the versions you have resolved, labels direct/runtime vs development/transitive exposure, deduplicates advisory sources, and emits CI-friendly exit codes.
