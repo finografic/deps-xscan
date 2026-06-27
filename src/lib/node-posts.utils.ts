@@ -156,22 +156,31 @@ function classifyVulnType(text: string): string {
 export async function scrapeNodeSecurityPosts(
   count: number = 5,
   cacheOpts: Partial<CacheOptions> = {},
+  options: { verbose?: boolean } = {},
 ): Promise<ScrapedPost[]> {
   const cacheKey = `${CACHE_KEY_PREFIX}-${count}`;
   const cached = getCached<ScrapedPost[]>(cacheKey, cacheOpts);
   if (cached) {
-    console.log(`[cache hit] Using cached Node.js security posts (${cached.length} posts)`);
+    if (options.verbose) {
+      console.log(`[cache hit] Using cached Node.js security posts (${cached.length} posts)`);
+    }
     return cached;
   }
 
-  console.log(`[fetch] Retrieving last ${count} Node.js security post URLs...`);
+  if (options.verbose) {
+    console.log(`[fetch] Retrieving last ${count} Node.js security post URLs...`);
+  }
   const urls = await fetchSecurityPostUrls(count);
-  console.log(`[fetch] Found ${urls.length} security post URLs`);
+  if (options.verbose) {
+    console.log(`[fetch] Found ${urls.length} security post URLs`);
+  }
 
   const posts: ScrapedPost[] = [];
 
   for (const url of urls) {
-    console.log(`[fetch] Parsing: ${url}`);
+    if (options.verbose) {
+      console.log(`[fetch] Parsing: ${url}`);
+    }
     const html = await fetchPostContent(url);
 
     const dateMatch = url.match(/(\w+-\d{4})/);

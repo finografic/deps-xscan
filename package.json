@@ -87,6 +87,7 @@
     "dev:cli": "NODE_ENV=development tsx src/cli.ts"
   },
   "dependencies": {
+    "@clack/prompts": "^1.6.0",
     "@finografic/cli-kit": "^1.4.0",
     "js-yaml": "^4.1.1",
     "node-fetch": "^3.3.2",

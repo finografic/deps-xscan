@@ -125,14 +125,17 @@ export async function queryGithubAdvisoryBatch(
   packages: Array<{ name: string; version: string }>,
   cacheOpts: Partial<CacheOptions> = {},
   token?: string,
+  options: { verbose?: boolean } = {},
 ): Promise<GithubAdvisoryQueryResult[]> {
   const unique = dedupePackages(packages);
   const results: GithubAdvisoryQueryResult[] = [];
 
-  console.log(`[github-advisory] Querying ${unique.length} package versions`);
+  if (options.verbose) {
+    console.log(`[github-advisory] Querying ${unique.length} package versions`);
+  }
 
   for (const { name, version } of unique) {
-    results.push(await queryGithubAdvisorySingle(name, version, cacheOpts, token));
+    results.push(await queryGithubAdvisorySingle(name, version, cacheOpts, token, options));
   }
 
   return results;
@@ -143,6 +146,7 @@ export async function queryGithubAdvisorySingle(
   version: string,
   cacheOpts: Partial<CacheOptions> = {},
   token?: string,
+  options: { verbose?: boolean } = {},
 ): Promise<GithubAdvisoryQueryResult> {
   const cacheKey = `${ADVISORY_CACHE_PREFIX}-${name}@${version}`;
   const cached = getCached<GithubAdvisoryQueryResult>(cacheKey, cacheOpts);
@@ -159,7 +163,9 @@ export async function queryGithubAdvisorySingle(
   const res = await fetch(`${GITHUB_API_BASE}/advisories?${params.toString()}`, { headers });
 
   if (!res.ok) {
-    console.warn(`[github-advisory] Warning: query failed for ${name}@${version} (${String(res.status)})`);
+    if (options.verbose) {
+      console.warn(`[github-advisory] Warning: query failed for ${name}@${version} (${String(res.status)})`);
+    }
     return { packageName: name, packageVersion: version, vulnerabilities: [] };
   }
 
@@ -182,9 +188,12 @@ export async function fetchDependabotAlerts(
   cacheOpts: Partial<CacheOptions> = {},
   token?: string,
   alertStates: string[] = ['open'],
+  options: { verbose?: boolean } = {},
 ): Promise<GithubDependabotAlert[]> {
   if (!token) {
-    console.warn(`[github-dependabot] Warning: ${githubTokenEnvLabel()} required for Dependabot alerts`);
+    if (options.verbose) {
+      console.warn(`[github-dependabot] Warning: ${githubTokenEnvLabel()} required for Dependabot alerts`);
+    }
     return [];
   }
 
@@ -195,7 +204,9 @@ export async function fetchDependabotAlerts(
   const fetch = (await import('node-fetch')).default;
   const [owner, repo] = repository.split('/');
   if (!owner || !repo) {
-    console.warn(`[github-dependabot] Warning: invalid repository "${repository}"`);
+    if (options.verbose) {
+      console.warn(`[github-dependabot] Warning: invalid repository "${repository}"`);
+    }
     return [];
   }
 
@@ -221,7 +232,9 @@ export async function fetchDependabotAlerts(
     );
 
     if (!res.ok) {
-      console.warn(`[github-dependabot] Warning: fetch failed for ${repository} (${String(res.status)})`);
+      if (options.verbose) {
+        console.warn(`[github-dependabot] Warning: fetch failed for ${repository} (${String(res.status)})`);
+      }
       break;
     }
 

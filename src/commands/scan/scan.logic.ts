@@ -1,4 +1,5 @@
 import { execSync } from 'node:child_process';
+import { tasks } from '@clack/prompts';
 
 import type { CacheOptions } from 'lib/cache.utils';
 import { correlate } from 'lib/correlate.utils';
@@ -15,6 +16,7 @@ import { parseLockfile } from 'lib/lockfile.utils';
 import { scrapeNodeSecurityPosts } from 'lib/node-posts.utils';
 import type { ScrapedPost } from 'lib/node-posts.utils';
 import { queryOsvBatch } from 'lib/osv.utils';
+import type { OsvQueryResult } from 'lib/osv.utils';
 import { generateReport } from 'lib/report.utils';
 import type { OutputFormat } from 'lib/report.utils';
 
@@ -38,6 +40,22 @@ function log(msg: string, verbose: boolean): void {
     const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
     console.log(`[${timestamp}] ${msg}`);
   }
+}
+
+function shouldUseSpinners(verbose: boolean): boolean {
+  return Boolean(process.stdout.isTTY) && !verbose;
+}
+
+function sourceErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function countOsvVulnerabilities(results: OsvQueryResult[]): number {
+  return results.reduce((sum, r) => sum + r.vulnerabilities.length, 0);
+}
+
+function countGithubVulnerabilities(results: GithubAdvisoryQueryResult[]): number {
+  return results.reduce((sum, r) => sum + r.vulnerabilities.length, 0);
 }
 
 export async function runScanPipeline(options: ScanOptions): Promise<number> {
@@ -67,10 +85,25 @@ export async function runScanPipeline(options: ScanOptions): Promise<number> {
     }
   }
 
+  const useSpinners = shouldUseSpinners(options.verbose);
+
   log(`Stage 2: Scraping last ${options.nodePosts} Node.js security posts...`, options.verbose);
-  let posts: ScrapedPost[];
+  let posts: ScrapedPost[] = [];
   try {
-    posts = await scrapeNodeSecurityPosts(options.nodePosts, cacheOpts);
+    if (useSpinners) {
+      await tasks([
+        {
+          title: `Node.js security posts (${options.nodePosts} posts)`,
+          task: async () => {
+            posts = await scrapeNodeSecurityPosts(options.nodePosts, cacheOpts);
+            const totalCves = posts.reduce((sum, p) => sum + p.vulnerabilities.length, 0);
+            return `Node.js security posts: ${posts.length} posts, ${totalCves} CVEs`;
+          },
+        },
+      ]);
+    } else {
+      posts = await scrapeNodeSecurityPosts(options.nodePosts, cacheOpts, { verbose: options.verbose });
+    }
     const totalCves = posts.reduce((sum, p) => sum + p.vulnerabilities.length, 0);
     log(`  Extracted ${totalCves} CVEs from ${posts.length} posts`, options.verbose);
   } catch (err: unknown) {
@@ -88,44 +121,85 @@ export async function runScanPipeline(options: ScanOptions): Promise<number> {
 
   const githubToken = resolveGithubToken(options.githubTokenEnv);
 
-  const [osvSettled, githubAdvisorySettled] = await Promise.allSettled([
-    queryOsvBatch(packages, cacheOpts),
-    options.githubEnabled ? queryGithubAdvisoryBatch(packages, cacheOpts, githubToken) : Promise.resolve([]),
-  ]);
+  let osvResults: OsvQueryResult[] = packages.map((p) => ({
+    packageName: p.name,
+    packageVersion: p.version,
+    vulnerabilities: [],
+  }));
+  let githubAdvisoryResults: GithubAdvisoryQueryResult[] = [];
+  let osvError: unknown;
+  let githubAdvisoryError: unknown;
 
-  let osvResults;
-  if (osvSettled.status === 'fulfilled') {
-    osvResults = osvSettled.value;
-    const vulnCount = osvResults.reduce((sum, r) => sum + r.vulnerabilities.length, 0);
-    log(`  OSV.dev: ${vulnCount} vulnerabilities`, options.verbose);
+  if (useSpinners) {
+    await tasks([
+      {
+        title: `OSV.dev (${packages.length} package versions)`,
+        task: async () => {
+          try {
+            osvResults = await queryOsvBatch(packages, cacheOpts);
+            return `OSV.dev: ${countOsvVulnerabilities(osvResults)} vulnerabilities`;
+          } catch (err: unknown) {
+            osvError = err;
+            return 'OSV.dev unavailable; continuing without OSV data';
+          }
+        },
+      },
+      {
+        title: `GitHub Advisory Database (${packages.length} package versions)`,
+        enabled: options.githubEnabled,
+        task: async () => {
+          try {
+            githubAdvisoryResults = await queryGithubAdvisoryBatch(packages, cacheOpts, githubToken);
+            return `GitHub Advisory Database: ${countGithubVulnerabilities(githubAdvisoryResults)} vulnerabilities`;
+          } catch (err: unknown) {
+            githubAdvisoryError = err;
+            return 'GitHub Advisory Database unavailable; continuing without GitHub advisory data';
+          }
+        },
+      },
+    ]);
   } else {
-    const message =
-      osvSettled.reason instanceof Error ? osvSettled.reason.message : String(osvSettled.reason);
-    console.warn(`Warning: OSV.dev query failed: ${message}`);
-    console.warn('Continuing without OSV.dev data...');
-    osvResults = packages.map((p) => ({
-      packageName: p.name,
-      packageVersion: p.version,
-      vulnerabilities: [],
-    }));
+    const [osvSettled, githubAdvisorySettled] = await Promise.allSettled([
+      queryOsvBatch(packages, cacheOpts, { verbose: options.verbose }),
+      options.githubEnabled
+        ? queryGithubAdvisoryBatch(packages, cacheOpts, githubToken, { verbose: options.verbose })
+        : Promise.resolve([]),
+    ]);
+
+    if (osvSettled.status === 'fulfilled') {
+      osvResults = osvSettled.value;
+    } else {
+      osvError = osvSettled.reason;
+    }
+
+    if (options.githubEnabled) {
+      if (githubAdvisorySettled.status === 'fulfilled') {
+        githubAdvisoryResults = githubAdvisorySettled.value;
+      } else {
+        githubAdvisoryError = githubAdvisorySettled.reason;
+      }
+    }
   }
 
-  let githubAdvisoryResults: GithubAdvisoryQueryResult[] = [];
-  if (options.githubEnabled) {
-    if (githubAdvisorySettled.status === 'fulfilled') {
-      githubAdvisoryResults = githubAdvisorySettled.value;
-      const ghVulnCount = githubAdvisoryResults.reduce((sum, r) => sum + r.vulnerabilities.length, 0);
-      log(`  GitHub Advisory Database: ${ghVulnCount} vulnerabilities`, options.verbose);
-    } else {
-      const message =
-        githubAdvisorySettled.reason instanceof Error
-          ? githubAdvisorySettled.reason.message
-          : String(githubAdvisorySettled.reason);
-      console.warn(`Warning: GitHub Advisory Database query failed: ${message}`);
-      console.warn('Continuing without GitHub advisory data...');
-    }
+  if (osvError) {
+    console.warn(`Warning: OSV.dev query failed: ${sourceErrorMessage(osvError)}`);
+    console.warn('Continuing without OSV.dev data...');
   } else {
+    log(`  OSV.dev: ${countOsvVulnerabilities(osvResults)} vulnerabilities`, options.verbose);
+  }
+
+  if (!options.githubEnabled) {
     log('  GitHub Advisory Database: skipped (--no-github)', options.verbose);
+  } else if (githubAdvisoryError) {
+    console.warn(
+      `Warning: GitHub Advisory Database query failed: ${sourceErrorMessage(githubAdvisoryError)}`,
+    );
+    console.warn('Continuing without GitHub advisory data...');
+  } else {
+    log(
+      `  GitHub Advisory Database: ${countGithubVulnerabilities(githubAdvisoryResults)} vulnerabilities`,
+      options.verbose,
+    );
   }
 
   let dependabotAlerts: GithubDependabotAlert[] = [];
@@ -144,12 +218,30 @@ export async function runScanPipeline(options: ScanOptions): Promise<number> {
       );
     } else {
       log(`  Repository: ${repository}`, options.verbose);
-      dependabotAlerts = await fetchDependabotAlerts(
-        repository,
-        cacheOpts,
-        githubToken,
-        options.githubAlertStates,
-      );
+      if (useSpinners) {
+        await tasks([
+          {
+            title: `Dependabot alerts (${repository})`,
+            task: async () => {
+              dependabotAlerts = await fetchDependabotAlerts(
+                repository,
+                cacheOpts,
+                githubToken,
+                options.githubAlertStates,
+              );
+              return `Dependabot alerts: ${dependabotAlerts.length} alerts`;
+            },
+          },
+        ]);
+      } else {
+        dependabotAlerts = await fetchDependabotAlerts(
+          repository,
+          cacheOpts,
+          githubToken,
+          options.githubAlertStates,
+          { verbose: options.verbose },
+        );
+      }
       log(`  Dependabot: ${dependabotAlerts.length} open alerts`, options.verbose);
     }
   }

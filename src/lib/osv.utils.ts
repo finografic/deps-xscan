@@ -27,6 +27,7 @@ export async function queryOsvSingle(
   name: string,
   version: string,
   cacheOpts: Partial<CacheOptions> = {},
+  options: { verbose?: boolean } = {},
 ): Promise<OsvQueryResult> {
   const cacheKey = `${CACHE_KEY_PREFIX}-${name}@${version}`;
   const cached = getCached<OsvQueryResult>(cacheKey, cacheOpts);
@@ -47,7 +48,9 @@ export async function queryOsvSingle(
   });
 
   if (!res.ok) {
-    console.warn(`[osv] Warning: query failed for ${name}@${version} (${res.status})`);
+    if (options.verbose) {
+      console.warn(`[osv] Warning: query failed for ${name}@${version} (${res.status})`);
+    }
     return { packageName: name, packageVersion: version, vulnerabilities: [] };
   }
 
@@ -68,6 +71,7 @@ export async function queryOsvSingle(
 export async function queryOsvBatch(
   packages: Array<{ name: string; version: string }>,
   cacheOpts: Partial<CacheOptions> = {},
+  options: { verbose?: boolean } = {},
 ): Promise<OsvQueryResult[]> {
   const fetch = (await import('node-fetch')).default;
 
@@ -86,11 +90,15 @@ export async function queryOsvBatch(
   }
 
   if (uncached.length === 0) {
-    console.log(`[osv] All ${packages.length} packages served from cache`);
+    if (options.verbose) {
+      console.log(`[osv] All ${packages.length} packages served from cache`);
+    }
     return results;
   }
 
-  console.log(`[osv] Querying ${uncached.length} packages (${packages.length - uncached.length} cached)`);
+  if (options.verbose) {
+    console.log(`[osv] Querying ${uncached.length} packages (${packages.length - uncached.length} cached)`);
+  }
 
   const BATCH_SIZE = 100;
   for (let offset = 0; offset < uncached.length; offset += BATCH_SIZE) {
@@ -109,9 +117,11 @@ export async function queryOsvBatch(
       });
 
       if (!res.ok) {
-        console.warn(`[osv] Batch query failed (${res.status}), falling back to individual queries`);
+        if (options.verbose) {
+          console.warn(`[osv] Batch query failed (${res.status}), falling back to individual queries`);
+        }
         for (const item of chunk) {
-          results[item.index] = await queryOsvSingle(item.name, item.version, cacheOpts);
+          results[item.index] = await queryOsvSingle(item.name, item.version, cacheOpts, options);
         }
         continue;
       }
@@ -138,7 +148,9 @@ export async function queryOsvBatch(
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
-      console.warn(`[osv] Batch error: ${message}`);
+      if (options.verbose) {
+        console.warn(`[osv] Batch error: ${message}`);
+      }
       for (const item of chunk) {
         results[item.index] = {
           packageName: item.name,
