@@ -1,0 +1,4 @@
+export const OSV_BATCH_SIZE = 100;
+export const GITHUB_ADVISORY_CHUNK_SIZE = 50;
+export const GITHUB_PAGE_SIZE = 100;
+export const GITHUB_URL_LENGTH_SOFT_LIMIT = 8000;

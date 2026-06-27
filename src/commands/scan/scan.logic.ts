@@ -2,6 +2,15 @@ import { execSync } from 'node:child_process';
 
 import type { CacheOptions } from 'lib/cache.utils';
 import { correlate } from 'lib/correlate.utils';
+import { loadProjectEnv } from 'lib/env.utils';
+import {
+  detectGithubRepo,
+  fetchDependabotAlerts,
+  githubTokenEnvLabel,
+  queryGithubAdvisoryBatch,
+  resolveGithubToken,
+} from 'lib/github-source.utils';
+import type { GithubAdvisoryQueryResult, GithubDependabotAlert } from 'lib/github-source.utils';
 import { parseLockfile } from 'lib/lockfile.utils';
 import { scrapeNodeSecurityPosts } from 'lib/node-posts.utils';
 import type { ScrapedPost } from 'lib/node-posts.utils';
@@ -17,6 +26,11 @@ export interface ScanOptions {
   nodePosts: number;
   jsonOut?: string;
   verbose: boolean;
+  githubEnabled: boolean;
+  dependabot: boolean;
+  githubRepo?: string;
+  githubAlertStates: string[];
+  githubTokenEnv?: string;
 }
 
 function log(msg: string, verbose: boolean): void {
@@ -33,6 +47,9 @@ export async function runScanPipeline(options: ScanOptions): Promise<number> {
   };
 
   const startTime = Date.now();
+
+  loadProjectEnv(options.project);
+  log('Loaded .env from project root (if present)', options.verbose);
 
   log('Stage 1: Parsing lockfile...', options.verbose);
   const lockResult = parseLockfile(options.project);
@@ -63,21 +80,29 @@ export async function runScanPipeline(options: ScanOptions): Promise<number> {
     posts = [];
   }
 
-  log(`Stage 3: Querying OSV.dev for ${lockResult.deps.length} packages...`, options.verbose);
+  log(`Stage 3: Querying OSV.dev and GitHub for ${lockResult.deps.length} packages...`, options.verbose);
   const packages = lockResult.deps.map((d) => ({
     name: d.name,
     version: d.version,
   }));
 
+  const githubToken = resolveGithubToken(options.githubTokenEnv);
+
+  const [osvSettled, githubAdvisorySettled] = await Promise.allSettled([
+    queryOsvBatch(packages, cacheOpts),
+    options.githubEnabled ? queryGithubAdvisoryBatch(packages, cacheOpts, githubToken) : Promise.resolve([]),
+  ]);
+
   let osvResults;
-  try {
-    osvResults = await queryOsvBatch(packages, cacheOpts);
+  if (osvSettled.status === 'fulfilled') {
+    osvResults = osvSettled.value;
     const vulnCount = osvResults.reduce((sum, r) => sum + r.vulnerabilities.length, 0);
-    log(`  Found ${vulnCount} vulnerabilities across all packages`, options.verbose);
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
+    log(`  OSV.dev: ${vulnCount} vulnerabilities`, options.verbose);
+  } else {
+    const message =
+      osvSettled.reason instanceof Error ? osvSettled.reason.message : String(osvSettled.reason);
     console.warn(`Warning: OSV.dev query failed: ${message}`);
-    console.warn('Continuing with Node.js blog data only...');
+    console.warn('Continuing without OSV.dev data...');
     osvResults = packages.map((p) => ({
       packageName: p.name,
       packageVersion: p.version,
@@ -85,10 +110,61 @@ export async function runScanPipeline(options: ScanOptions): Promise<number> {
     }));
   }
 
-  log('Stage 4: Correlating findings...', options.verbose);
-  const result = correlate(lockResult.deps, nodeVersion, posts, osvResults);
+  let githubAdvisoryResults: GithubAdvisoryQueryResult[] = [];
+  if (options.githubEnabled) {
+    if (githubAdvisorySettled.status === 'fulfilled') {
+      githubAdvisoryResults = githubAdvisorySettled.value;
+      const ghVulnCount = githubAdvisoryResults.reduce((sum, r) => sum + r.vulnerabilities.length, 0);
+      log(`  GitHub Advisory Database: ${ghVulnCount} vulnerabilities`, options.verbose);
+    } else {
+      const message =
+        githubAdvisorySettled.reason instanceof Error
+          ? githubAdvisorySettled.reason.message
+          : String(githubAdvisorySettled.reason);
+      console.warn(`Warning: GitHub Advisory Database query failed: ${message}`);
+      console.warn('Continuing without GitHub advisory data...');
+    }
+  } else {
+    log('  GitHub Advisory Database: skipped (--no-github)', options.verbose);
+  }
 
-  log('Stage 5: Generating report...', options.verbose);
+  let dependabotAlerts: GithubDependabotAlert[] = [];
+  if (options.dependabot) {
+    log('Stage 4: Fetching Dependabot alerts...', options.verbose);
+    const repository = options.githubRepo || detectGithubRepo(options.project);
+    if (!repository) {
+      console.warn('Warning: Could not detect GitHub repository for Dependabot alerts.');
+      console.warn('  Use --github-repo owner/repo or run from a git clone with a GitHub origin remote.');
+    } else if (!githubToken) {
+      console.warn(
+        `Warning: ${githubTokenEnvLabel(options.githubTokenEnv)} not set — Dependabot alerts require a GitHub token.`,
+      );
+      console.warn(
+        '  Add a token to the project .env (e.g. NPM_TOKEN), export it in your shell, or set GITHUB_TOKEN_FILE.',
+      );
+    } else {
+      log(`  Repository: ${repository}`, options.verbose);
+      dependabotAlerts = await fetchDependabotAlerts(
+        repository,
+        cacheOpts,
+        githubToken,
+        options.githubAlertStates,
+      );
+      log(`  Dependabot: ${dependabotAlerts.length} open alerts`, options.verbose);
+    }
+  }
+
+  log('Stage 5: Correlating findings...', options.verbose);
+  const result = correlate(
+    lockResult.deps,
+    nodeVersion,
+    posts,
+    osvResults,
+    githubAdvisoryResults,
+    dependabotAlerts,
+  );
+
+  log('Stage 6: Generating report...', options.verbose);
   generateReport(result, options.format, options.jsonOut);
 
   const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);

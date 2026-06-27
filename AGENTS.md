@@ -84,13 +84,17 @@ Shared across Claude Code, Cursor, and GitHub Copilot.
 - Reserve `scripts/` for thin package.json runners (tsx); move application code into `src/` subfolders such as `lib/`, `commands/`, and `utils/`.
 - Align Finografic CLIs with `@finografic/cli-kit` as the canonical pattern — do not vend local `src/core/` or follow stale CLI_CORE.md guidance.
 - When oxlint flags intentional return-type-only generics, extend or suppress them rather than removing the type parameter.
+- Store GitHub PATs as `NPM_TOKEN` in project `.env` files (not `GITHUB_TOKEN` — GitHub reserves that name).
 
 ## Learned Workspace Facts
 
 - Scanner pipeline lives in `src/lib/` (five stages plus cache) and `src/commands/scan/`; CLI entry is `src/cli.ts` built to `dist/index.mjs` (`xscan`).
+- Global binary is `xscan` (also `deps-xscan`); `pnpm scan` is a dev shortcut in this repo only.
 - CLI infrastructure uses `@finografic/cli-kit` subpaths (`flow`, `render-help`, `commands`) — not local `src/core/`.
 - `@finografic/core` is not used in this project; do not add it unless a specific utility need arises.
 - `docs/spec/CLI_CORE.md` was removed as obsolete; the canonical CLI spec is `CLI_KIT.md` in the cli-kit repo.
 - Dev-only stage runners live in `scripts/dev-*.ts` as thin wrappers around `src/lib/*`.
+- GitHub Advisory Database is on by default; Dependabot alerts require `--dependabot`.
+- GitHub token: load `.env`/`.env.local` from scanned project root; auto-detect `NPM_TOKEN` → `GH_TOKEN` → `GITHUB_TOKEN`; override via `--github-token-env` (comma-separated) or `GITHUB_TOKEN_FILE`.
 
 ---

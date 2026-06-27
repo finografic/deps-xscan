@@ -2,7 +2,7 @@
   "name": "@finografic/deps-xscan",
   "version": "0.4.1",
   "private": false,
-  "description": "Dependency security x-scan: cross-checks your resolved dependency tree against OSV, Node.js advisories, and GitHub Advisory data.",
+  "description": "Dependency security x-scan: cross-checks your resolved dependency tree against OSV, Node.js advisories, and GitHub Advisory / Dependabot data.",
   "keywords": [
     "cli",
     "deps-xscan",

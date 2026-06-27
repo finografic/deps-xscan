@@ -27,7 +27,7 @@ _Nothing active right now — pick from P1._
 
 ## P1 — Next Up
 
-_No items yet._
+_No items queued — pick from P2 or backlog._
 
 ---
 
@@ -45,6 +45,6 @@ _No items yet._
 
 ## Done
 
-| Item                           | Completed |
-| ------------------------------ | --------- |
-| _No completed milestones yet._ | —         |
+| Item                                                         | Completed  | Plan                             |
+| ------------------------------------------------------------ | ---------- | -------------------------------- |
+| Add GitHub security source to consolidated dependency report | 2026-06-27 | `DONE_GITHUB_SECURITY_SOURCE.md` |

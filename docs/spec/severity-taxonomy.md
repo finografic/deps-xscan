@@ -99,3 +99,17 @@ For each vulnerability mentioned, provide:
 
 Return as JSON array.
 ```
+
+## GitHub Source Severity Fields
+
+When findings include `github-advisory` or `github-dependabot` sources, severity may come from GitHub's advisory severity label or CVSS score on the advisory record.
+
+| Field            | Source                   | Notes                                              |
+| ---------------- | ------------------------ | -------------------------------------------------- |
+| `severity`       | GitHub advisory label    | Mapped: critical/high/medium/moderate/low/unknown  |
+| `cvssScore`      | GitHub Advisory Database | Numeric CVSS v3 score when present                 |
+| `cvssVector`     | GitHub Advisory Database | CVSS vector string when present                    |
+| `epssPercentage` | GitHub Advisory Database | Exploit prediction score; shown in report when set |
+| `cwes`           | GitHub Advisory Database | CWE identifiers (e.g. `CWE-327`)                   |
+
+Dependabot alerts use GitHub's `security_advisory.severity` for the same label mapping. Dependabot-confirmed `scope` (`runtime` / `development`) takes precedence over lockfile path inference in the action summary.

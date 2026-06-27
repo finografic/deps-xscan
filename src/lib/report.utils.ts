@@ -5,6 +5,8 @@ import type { CorrelationResult, Finding } from 'lib/correlate.utils';
 import type { ReportFoundLine } from 'lib/report-summary.utils';
 import { buildActionSummary } from 'lib/report-summary.utils';
 
+import type { SecuritySourceId } from 'constants/security-sources.constants';
+import { SECURITY_SOURCE_LABELS } from 'constants/security-sources.constants';
 import {
   HR_SEPARATOR,
   TITLE_BORDER_CLOSE,
@@ -89,7 +91,7 @@ function printTerminalReport(
       const sevColor = severityColor(severity);
 
       console.log();
-      console.log(sevColor(`  ── ${severity.toUpperCase()} (${findings.length}) ──`));
+      console.log(sevColor(`  == ${severity.toUpperCase()} (${findings.length}) ==`));
 
       for (const f of findings) {
         const directLabel = f.isDirect
@@ -127,10 +129,24 @@ function printTerminalReport(
           console.log(`    ${pc.dim('Ref:')}    ${reference}`);
         }
 
-        const sourceLabels = f.sources.map((s) =>
-          s === 'node-blog' ? pc.cyan('Node.js Blog') : pc.cyan('OSV.dev'),
-        );
+        const sourceLabels = f.sources.map((s) => pc.cyan(formatSourceLabel(s)));
         console.log(`    ${pc.dim('Source:')} ${sourceLabels.join(', ')}`);
+
+        if (f.manifestPath && f.manifestPath !== 'unknown') {
+          console.log(`    ${pc.dim('Manifest:')} ${f.manifestPath}`);
+        }
+        if (f.scope && f.scope !== 'unknown') {
+          console.log(`    ${pc.dim('Scope:')} ${f.scope}`);
+        }
+        if (f.githubAlertUrl) {
+          console.log(`    ${pc.dim('GitHub:')} ${f.githubAlertUrl}`);
+        }
+        if (f.epssPercentage != null) {
+          console.log(`    ${pc.dim('EPSS:')} ${f.epssPercentage.toFixed(2)}%`);
+        }
+        if (f.cwes && f.cwes.length > 0) {
+          console.log(`    ${pc.dim('CWE:')} ${f.cwes.join(', ')}`);
+        }
       }
     }
   }
@@ -144,7 +160,7 @@ function printTerminalReport(
   console.log();
   console.log(pc.dim(HR_SEPARATOR));
   console.log();
-  console.log(pc.dim('  Sources: Node.js Security Blog, OSV.dev'));
+  console.log(pc.dim('  Sources: Node.js Security Blog, OSV.dev, GitHub Advisory Database, Dependabot'));
   console.log(pc.dim('  Note: This scan is a point-in-time snapshot. New vulns may be'));
   console.log(pc.dim('  disclosed at any time. Run regularly for best coverage.'));
 
@@ -197,6 +213,10 @@ function printFoundLines(lines: ReportFoundLine[]): void {
 function foundCountColor(line: ReportFoundLine): (s: string) => string {
   if (line.count === 0) return pc.green;
   return severityColor(line.severity);
+}
+
+function formatSourceLabel(source: SecuritySourceId): string {
+  return SECURITY_SOURCE_LABELS[source] || source;
 }
 
 function singleLine(text: string, maxLength: number): string {

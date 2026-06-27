@@ -15,6 +15,17 @@ const SCAN_FLAG_DEFS = {
   'node-posts': { type: 'number' as const, description: 'Number of Node.js security posts' },
   'json-out': { type: 'string' as const, description: 'JSON report output path' },
   'verbose': { alias: 'v', type: 'boolean' as const, description: 'Verbose progress output' },
+  'no-github': { type: 'boolean' as const, description: 'Disable GitHub Advisory Database checks' },
+  'dependabot': { type: 'boolean' as const, description: 'Fetch Dependabot alerts for the repository' },
+  'github-repo': { type: 'string' as const, description: 'GitHub owner/repo for Dependabot alerts' },
+  'github-alert-states': {
+    type: 'string' as const,
+    description: 'Dependabot alert states (comma-separated, default: open)',
+  },
+  'github-token-env': {
+    type: 'string' as const,
+    description: 'Env var(s) for GitHub token, comma-separated (default: NPM_TOKEN, GH_TOKEN, GITHUB_TOKEN)',
+  },
 };
 
 export const runScanCommand: CommandHandler = async ({ argv, cwd }) => {
@@ -33,6 +44,11 @@ export const runScanCommand: CommandHandler = async ({ argv, cwd }) => {
       nodePosts: flow.flags['node-posts'] || 5,
       jsonOut: flow.flags['json-out'] || undefined,
       verbose: flow.flags.verbose ?? false,
+      githubEnabled: !(flow.flags['no-github'] ?? false),
+      dependabot: flow.flags.dependabot ?? false,
+      githubRepo: flow.flags['github-repo'] || undefined,
+      githubAlertStates: parseAlertStates(flow.flags['github-alert-states']),
+      githubTokenEnv: flow.flags['github-token-env'] || undefined,
     });
 
     if (exitCode !== 0) {
@@ -40,3 +56,12 @@ export const runScanCommand: CommandHandler = async ({ argv, cwd }) => {
     }
   });
 };
+
+function parseAlertStates(raw: string | undefined): string[] {
+  if (!raw) return ['open'];
+  const states = raw
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  return states.length > 0 ? states : ['open'];
+}

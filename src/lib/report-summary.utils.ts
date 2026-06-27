@@ -43,7 +43,7 @@ function buildFoundLines(result: CorrelationResult): ReportFoundLine[] {
   const counts = new Map<string, number>();
 
   for (const finding of result.dependencyFindings) {
-    const scope = finding.dependencyKind === 'prod' ? 'runtime' : 'development';
+    const scope = resolveFindingScope(finding);
     incrementCount(counts, finding.severity, scope);
   }
 
@@ -80,6 +80,14 @@ function incrementCount(counts: Map<string, number>, severity: FindingSeverity, 
 
 function foundKey(severity: FindingSeverity, scope: FindingScope): string {
   return `${severity}:${scope}`;
+}
+
+function resolveFindingScope(finding: Finding): FindingScope {
+  if (finding.sources.includes('github-dependabot')) {
+    if (finding.scope === 'runtime') return 'runtime';
+    if (finding.scope === 'development') return 'development';
+  }
+  return finding.dependencyKind === 'prod' ? 'runtime' : 'development';
 }
 
 function buildActionSteps(result: CorrelationResult): string[] {
@@ -150,6 +158,18 @@ function buildRecommendation(result: CorrelationResult): string {
 }
 
 function prodPriorityReason(finding: Finding): string {
+  if (finding.sources.includes('github-dependabot')) {
+    const scopeNote =
+      finding.scope === 'runtime'
+        ? 'GitHub Dependabot confirms this as a runtime dependency'
+        : finding.scope === 'development'
+          ? 'GitHub Dependabot confirms this as a development dependency'
+          : 'GitHub Dependabot confirmed this alert for your repository';
+    if (finding.githubAlertUrl) {
+      return `${scopeNote} (${finding.githubAlertUrl})`;
+    }
+    return scopeNote;
+  }
   if (finding.dependencyKind === 'prod') {
     return 'this is a direct production dependency and affects runtime consumers';
   }
