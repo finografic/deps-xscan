@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import yaml from 'js-yaml';
+import { load as loadYaml } from 'js-yaml';
 
 import { isCliMain } from './is-cli-main';
 
@@ -69,7 +69,7 @@ export function parseLockfile(projectRoot: string): LockfileResult {
   }
 
   throw new Error(
-    `No supported lockfile found in ${projectRoot}. ` + `Expected package-lock.json or pnpm-lock.yaml`,
+    `No supported lockfile found in ${projectRoot}. Expected package-lock.json or pnpm-lock.yaml`,
   );
 }
 
@@ -83,7 +83,7 @@ function parseNpmLock(lockPath: string, directDeps: Set<string>, peerDeps: Set<s
   // v2/v3 format uses "packages" keyed by node_modules path
   const packages = lock.packages || {};
 
-  for (const [pkgPath, meta] of Object.entries(packages) as Array<[string, any]>) {
+  for (const [pkgPath, meta] of Object.entries(packages) as Array<[string, { version?: string }]>) {
     // Skip the root entry (empty string key)
     if (!pkgPath) continue;
 
@@ -137,13 +137,13 @@ function parseNpmLockV1(
  */
 function parsePnpmLock(lockPath: string, directDeps: Set<string>, peerDeps: Set<string>): ResolvedDep[] {
   const raw = readFileSync(lockPath, 'utf-8');
-  const lock = yaml.load(raw) as any;
+  const lock = loadYaml(raw) as Record<string, Record<string, unknown>>;
   const deps: ResolvedDep[] = [];
 
   // pnpm v9+ uses "snapshots" + "packages", older uses "packages" directly
   const packages = lock.packages || {};
 
-  for (const [key] of Object.entries(packages) as Array<[string, any]>) {
+  for (const [key] of Object.entries(packages)) {
     // Keys look like "/@scope/name@1.2.3" or "/name@1.2.3" or "name@1.2.3"
     const match = key.match(/\/?(@?[^@]+)@(.+)/);
     if (!match) continue;

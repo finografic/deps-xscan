@@ -241,6 +241,7 @@ if (isCliMain(import.meta.url)) {
   scrapeNodeSecurityPosts(count)
     .then((posts) => {
       console.log(JSON.stringify(posts, null, 2));
+      return posts;
     })
     .catch((err) => {
       console.error(`Error: ${err.message}`);

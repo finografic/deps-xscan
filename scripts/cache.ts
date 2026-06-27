@@ -36,7 +36,9 @@ function cachePath(key: string): string {
   return join(CACHE_DIR, `${cacheKey(key)}.json`);
 }
 
-export function getCached<T>(key: string, opts: Partial<CacheOptions> = {}): T | null {
+// Generic T lets callers specify the cached shape at the call site (e.g. getCached<OsvQueryResult>).
+// oxlint-disable-next-line typescript/no-unnecessary-type-parameters -- return-type-only generic for JSON cache reads
+export function getCached<T = unknown>(key: string, opts: Partial<CacheOptions> = {}): T | null {
   const options = { ...DEFAULT_OPTIONS, ...opts };
   if (options.disabled) return null;
 
@@ -56,13 +58,14 @@ export function getCached<T>(key: string, opts: Partial<CacheOptions> = {}): T |
   }
 }
 
-export function setCache<T>(key: string, data: T, opts: Partial<CacheOptions> = {}): void {
+export function setCache<T>(key: string, data: T, opts: Partial<CacheOptions> = {}): T {
   const options = { ...DEFAULT_OPTIONS, ...opts };
-  if (options.disabled) return;
+  if (options.disabled) return data;
 
   ensureCacheDir();
   const path = cachePath(key);
   writeFileSync(path, JSON.stringify(data, null, 2), 'utf-8');
+  return data;
 }
 
 export function clearCache(): void {

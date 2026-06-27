@@ -244,6 +244,7 @@ if (isCliMain(import.meta.url)) {
   queryOsvSingle(name, version)
     .then((result) => {
       console.log(JSON.stringify(result, null, 2));
+      return result;
     })
     .catch((err) => {
       console.error(`Error: ${err.message}`);
