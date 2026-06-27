@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 
-import { queryOsvSingle } from '../src/lib/osv';
+import { queryOsvSingle } from '../src/lib/osv.utils';
 
 const name = process.argv[2];
 const version = process.argv[3];

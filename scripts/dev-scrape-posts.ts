@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 
-import { scrapeNodeSecurityPosts } from '../src/lib/node-posts';
+import { scrapeNodeSecurityPosts } from '../src/lib/node-posts.utils';
 
 const count = parseInt(process.argv[2] || '5', 10);
 

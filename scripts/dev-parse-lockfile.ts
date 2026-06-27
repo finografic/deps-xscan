@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 
-import { parseLockfile } from '../src/lib/lockfile';
+import { parseLockfile } from '../src/lib/lockfile.utils';
 
 const projectRoot = process.argv[2] || process.cwd();
 

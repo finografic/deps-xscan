@@ -1,13 +1,13 @@
 import { execSync } from 'node:child_process';
 
-import type { CacheOptions } from 'lib/cache';
-import { correlate } from 'lib/correlate';
-import { parseLockfile } from 'lib/lockfile';
-import { scrapeNodeSecurityPosts } from 'lib/node-posts';
-import type { ScrapedPost } from 'lib/node-posts';
-import { queryOsvBatch } from 'lib/osv';
-import { generateReport } from 'lib/report';
-import type { OutputFormat } from 'lib/report';
+import type { CacheOptions } from 'lib/cache.utils';
+import { correlate } from 'lib/correlate.utils';
+import { parseLockfile } from 'lib/lockfile.utils';
+import { scrapeNodeSecurityPosts } from 'lib/node-posts.utils';
+import type { ScrapedPost } from 'lib/node-posts.utils';
+import { queryOsvBatch } from 'lib/osv.utils';
+import { generateReport } from 'lib/report.utils';
+import type { OutputFormat } from 'lib/report.utils';
 
 export interface ScanOptions {
   project: string;

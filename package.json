@@ -23,7 +23,7 @@
     "url": "git+https://github.com/finografic/deps-xscan.git"
   },
   "bin": {
-    "xscan": "./dist/index.mjs"
+    "deps-xscan": "./dist/index.mjs"
   },
   "files": [
     "dist"

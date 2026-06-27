@@ -1,8 +1,8 @@
 import semver from 'semver';
 
-import type { ResolvedDep } from 'lib/lockfile';
-import type { ScrapedPost } from 'lib/node-posts';
-import type { OsvQueryResult } from 'lib/osv';
+import type { ResolvedDep } from 'lib/lockfile.utils';
+import type { ScrapedPost } from 'lib/node-posts.utils';
+import type { OsvQueryResult } from 'lib/osv.utils';
 
 export interface Finding {
   id: string;

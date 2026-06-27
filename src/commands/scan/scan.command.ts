@@ -2,7 +2,7 @@ import type { CommandHandler } from '@finografic/cli-kit/commands';
 import { createFlowContext } from '@finografic/cli-kit/flow';
 import { withHelp } from '@finografic/cli-kit/render-help';
 
-import type { OutputFormat } from 'lib/report';
+import type { OutputFormat } from 'lib/report.utils';
 
 import { scanHelp } from './scan.help';
 import { runScanPipeline } from './scan.logic';

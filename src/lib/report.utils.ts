@@ -1,7 +1,16 @@
 import { writeFileSync } from 'node:fs';
 import pc from 'picocolors';
 
-import type { CorrelationResult, Finding } from 'lib/correlate';
+import type { CorrelationResult, Finding } from 'lib/correlate.utils';
+import type { ReportFoundLine } from 'lib/report-summary.utils';
+import { buildActionSummary } from 'lib/report-summary.utils';
+
+import {
+  HR_SEPARATOR,
+  TITLE_BORDER_CLOSE,
+  TITLE_BORDER_OPEN,
+  TITLE_BORDER_SIDE,
+} from 'constants/tui.constants';
 
 export type OutputFormat = 'terminal' | 'json' | 'both';
 
@@ -10,34 +19,39 @@ export function generateReport(
   format: OutputFormat = 'both',
   jsonOutputPath?: string,
 ): void {
-  if (format === 'terminal' || format === 'both') {
-    printTerminalReport(result);
-  }
+  const actionSummary = buildActionSummary(result);
+  let savedJsonPath: string | undefined;
 
   if (format === 'json' || format === 'both') {
-    const jsonOutput = JSON.stringify(result, null, 2);
-    if (jsonOutputPath) {
-      writeFileSync(jsonOutputPath, jsonOutput, 'utf-8');
-      console.log(`\n${pc.dim(`JSON report saved to: ${jsonOutputPath}`)}`);
-    } else {
-      const defaultPath = 'deps-xscan-report.json';
-      writeFileSync(defaultPath, jsonOutput, 'utf-8');
-      console.log(`\n${pc.dim(`JSON report saved to: ${defaultPath}`)}`);
-    }
+    savedJsonPath = jsonOutputPath || 'deps-xscan-report.json';
+    const jsonOutput = JSON.stringify(actionSummary ? { ...result, actionSummary } : result, null, 2);
+    writeFileSync(savedJsonPath, jsonOutput, 'utf-8');
+  }
+
+  if (format === 'terminal' || format === 'both') {
+    printTerminalReport(result, actionSummary, savedJsonPath);
+  }
+
+  if (format === 'json') {
+    console.log(`\n${pc.dim(`  JSON report saved to: ${savedJsonPath}`)}`);
   }
 }
 
-function printTerminalReport(result: CorrelationResult): void {
+function printTerminalReport(
+  result: CorrelationResult,
+  actionSummary: ReturnType<typeof buildActionSummary>,
+  savedJsonPath?: string,
+): void {
   const { summary, nodeVersionFindings, dependencyFindings } = result;
 
   console.log();
-  console.log(pc.bold(pc.white('╔══════════════════════════════════════════════════════╗')));
+  console.log(pc.bold(pc.white(TITLE_BORDER_OPEN)));
   console.log(
-    pc.bold(pc.white('║')) +
+    pc.bold(pc.white(TITLE_BORDER_SIDE)) +
       pc.bold(pc.cyan('  deps-xscan — Security Report')) +
-      pc.bold(pc.white('                        ║')),
+      pc.bold(pc.white(`                        ${TITLE_BORDER_SIDE}`)),
   );
-  console.log(pc.bold(pc.white('╚══════════════════════════════════════════════════════╝')));
+  console.log(pc.bold(pc.white(TITLE_BORDER_CLOSE)));
   console.log();
 
   console.log(pc.dim(`  Scanned at:     ${result.scannedAt}`));
@@ -50,7 +64,7 @@ function printTerminalReport(result: CorrelationResult): void {
   if (nodeVersionFindings.length > 0) {
     console.log();
     console.log(pc.bold(pc.yellow('  ⚠  Node.js Version Vulnerabilities')));
-    console.log(pc.dim('  ─'.repeat(30)));
+    console.log(pc.dim(HR_SEPARATOR));
 
     for (const f of nodeVersionFindings) {
       const sevColor = severityColor(f.severity);
@@ -66,7 +80,7 @@ function printTerminalReport(result: CorrelationResult): void {
   if (dependencyFindings.length > 0) {
     console.log();
     console.log(pc.bold(pc.red('  🔍 Dependency Vulnerabilities')));
-    console.log(pc.dim('  ─'.repeat(30)));
+    console.log(pc.dim(HR_SEPARATOR));
 
     const grouped = groupBySeverity(dependencyFindings);
 
@@ -114,7 +128,7 @@ function printTerminalReport(result: CorrelationResult): void {
         }
 
         const sourceLabels = f.sources.map((s) =>
-          s === 'node-blog' ? pc.cyan('Node.js Blog') : pc.blue('OSV.dev'),
+          s === 'node-blog' ? pc.cyan('Node.js Blog') : pc.cyan('OSV.dev'),
         );
         console.log(`    ${pc.dim('Source:')} ${sourceLabels.join(', ')}`);
       }
@@ -128,11 +142,61 @@ function printTerminalReport(result: CorrelationResult): void {
   }
 
   console.log();
-  console.log(pc.dim('  ─'.repeat(30)));
+  console.log(pc.dim(HR_SEPARATOR));
+  console.log();
   console.log(pc.dim('  Sources: Node.js Security Blog, OSV.dev'));
   console.log(pc.dim('  Note: This scan is a point-in-time snapshot. New vulns may be'));
   console.log(pc.dim('  disclosed at any time. Run regularly for best coverage.'));
+
+  if (savedJsonPath) {
+    console.log();
+    console.log(pc.dim(`  JSON report saved to: ${savedJsonPath}`));
+  }
+
+  if (actionSummary) {
+    printActionSummary(actionSummary);
+  }
+
   console.log();
+}
+
+function printActionSummary(actionSummary: NonNullable<ReturnType<typeof buildActionSummary>>): void {
+  console.log();
+  console.log(pc.dim(HR_SEPARATOR));
+  console.log();
+  console.log(pc.bold(pc.green('SUMMARY & ACTIONS:')));
+  console.log();
+  printFoundLines(actionSummary.foundLines);
+  console.log();
+  console.log(pc.bold(pc.dim(pc.cyan('WHAT TO DO:'))));
+  console.log();
+
+  for (const step of actionSummary.actionSteps) {
+    for (const [index, line] of step.split('\n').entries()) {
+      console.log(index === 0 ? line : pc.cyan(line.trim()));
+    }
+    console.log();
+  }
+
+  console.log(pc.bold(pc.dim(pc.cyan('RECOMMENDATION:'))));
+  console.log();
+  console.log(actionSummary.recommendation);
+}
+
+function printFoundLines(lines: ReportFoundLine[]): void {
+  const labelWidth = Math.max(...lines.map((line) => line.label.length));
+  const countWidth = Math.max(...lines.map((line) => String(line.count).length), 1);
+
+  for (const line of lines) {
+    const label = `${line.label}:`.padEnd(labelWidth + 1);
+    const count = String(line.count).padStart(countWidth);
+    console.log(`${label} ${foundCountColor(line)(count)}`);
+  }
+}
+
+function foundCountColor(line: ReportFoundLine): (s: string) => string {
+  if (line.count === 0) return pc.green;
+  return severityColor(line.severity);
 }
 
 function singleLine(text: string, maxLength: number): string {
@@ -151,7 +215,7 @@ function printSummaryBar(summary: CorrelationResult['summary']): void {
   const parts = [
     summary.critical > 0 ? pc.bgRed(pc.white(` ${summary.critical} CRITICAL `)) : null,
     summary.high > 0 ? pc.bgYellow(pc.black(` ${summary.high} HIGH `)) : null,
-    summary.medium > 0 ? pc.bgBlue(pc.white(` ${summary.medium} MEDIUM `)) : null,
+    summary.medium > 0 ? pc.bgCyan(pc.white(` ${summary.medium} MEDIUM `)) : null,
     summary.low > 0 ? pc.bgWhite(pc.black(` ${summary.low} LOW `)) : null,
   ].filter(Boolean);
 
@@ -177,7 +241,7 @@ function severityColor(severity: string): (s: string) => string {
     case 'High':
       return pc.yellow;
     case 'Medium':
-      return pc.blue;
+      return pc.cyan;
     case 'Low':
       return pc.dim;
     default:

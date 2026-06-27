@@ -1,5 +1,5 @@
-import type { CacheOptions } from 'lib/cache';
-import { getCached, setCache } from 'lib/cache';
+import type { CacheOptions } from 'lib/cache.utils';
+import { getCached, setCache } from 'lib/cache.utils';
 
 export interface NodeVulnerability {
   cve: string;
