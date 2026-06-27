@@ -7,7 +7,7 @@ build/
 *.tgz
 
 # Cache files
-.dep-tree-scanner-cache/
+.deps-xscan-cache/
 
 # Report outputs
 deps-xscan-report.json
