@@ -1,15 +1,17 @@
 # 🔒 @finografic/deps-xscan
 
-> Dependency security x-scan for Node.js projects. Scans your resolved lockfile
-> dependency tree against OSV.dev, GitHub Advisory Database, optional
-> Dependabot alerts, and Node.js runtime advisories.
+> Dependency security xscan for Node.js projects.
+> Scans your resolved lockfile dependency tree against:
+>
+> - OSV.dev
+> - Node.js runtime advisories
+> - GitHub Advisory Database
+> - optional Dependabot alerts
 
-`deps-xscan` is the project/package. `xscan` is the CLI command.
+![deps-xscan](./docs/deps-xscan.gif)
 
-`xscan` is built for the gap between “this package exists somewhere in my tree”
-and “what should I actually do about it?” It reports findings against the
-versions you have resolved, labels direct/runtime vs development/transitive
-exposure, deduplicates advisory sources, and emits CI-friendly exit codes.
+`xscan` is built for the gap between “this package exists somewhere in my tree” and “what should I actually do about it?”
+It reports findings against the versions you have resolved, labels direct/runtime vs development/transitive exposure, deduplicates advisory sources, and emits CI-friendly exit codes.
 
 ## Features
 
