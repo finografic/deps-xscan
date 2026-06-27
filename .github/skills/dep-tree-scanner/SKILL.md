@@ -71,6 +71,8 @@ deps-xscan --node-posts 10                      # check last 10 Node.js security
 --verbose, -v         Show per-stage progress
 ```
 
+Cached API responses: hashed JSON under `~/.config/finografic/deps-xscan/cache/` (`XDG_CONFIG_HOME` respected). Default TTL 24h.
+
 ## Pipeline stages
 
 ### Stage 1 — Parse lockfile (`parse-lockfile.ts`)
@@ -85,7 +87,7 @@ runtime's `node --version`.
 
 ### Stage 3 — Scrape Node.js security posts (`scrape-node-posts.ts`)
 
-Fetches the last N posts from the Node.js vulnerability blog. Cached at `~/.dep-tree-scanner-cache/`
+Fetches the last N posts from the Node.js vulnerability blog. Cached under `~/.config/finografic/deps-xscan/cache/` (hashed JSON files; TTL default 24h).
 with a 24h TTL. Extracts CVEs, severity, affected version ranges, and vuln type.
 
 **LLM integration point:** blog posts use inconsistent formatting across releases. Use the

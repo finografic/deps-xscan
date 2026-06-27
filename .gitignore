@@ -6,9 +6,6 @@ dist/
 build/
 *.tgz
 
-# Cache files
-.deps-xscan-cache/
-
 # Report outputs
 deps-xscan-report.json
 

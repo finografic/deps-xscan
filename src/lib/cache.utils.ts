@@ -2,15 +2,25 @@ import { createHash } from 'node:crypto';
 import {
   existsSync,
   mkdirSync,
-  readFileSync,
   readdirSync,
+  readFileSync,
+  renameSync,
+  rmdirSync,
   statSync,
   unlinkSync,
   writeFileSync,
 } from 'node:fs';
+import { homedir } from 'node:os';
 import { join } from 'node:path';
+import { createXdgPaths } from '@finografic/cli-kit/xdg';
 
-const CACHE_DIR = join(process.env.HOME || '/tmp', '.deps-xscan-cache');
+/** Subfolder under `~/.config/finografic/` for hashed per-request cache JSON files. */
+const CACHE_PACKAGE_DIR = 'deps-xscan/cache';
+
+/** Pre-XDG cache location (migrated on first write). */
+const LEGACY_CACHE_DIR = join(homedir(), '.deps-xscan-cache');
+
+let legacyMigrationDone = false;
 
 export interface CacheOptions {
   ttlHours: number;
@@ -22,9 +32,43 @@ const DEFAULT_OPTIONS: CacheOptions = {
   disabled: false,
 };
 
+/** Resolved cache directory (e.g. `~/.config/finografic/deps-xscan/cache`). */
+export function getCacheDirectory(): string {
+  return join(createXdgPaths().configDir(), CACHE_PACKAGE_DIR);
+}
+
 function ensureCacheDir(): void {
-  if (!existsSync(CACHE_DIR)) {
-    mkdirSync(CACHE_DIR, { recursive: true });
+  const dir = getCacheDirectory();
+  if (!existsSync(dir)) {
+    mkdirSync(dir, { recursive: true });
+  }
+  migrateLegacyCacheIfNeeded();
+}
+
+function migrateLegacyCacheIfNeeded(): void {
+  if (legacyMigrationDone || !existsSync(LEGACY_CACHE_DIR)) return;
+  legacyMigrationDone = true;
+
+  const targetDir = getCacheDirectory();
+  for (const file of readdirSync(LEGACY_CACHE_DIR)) {
+    if (!file.endsWith('.json')) continue;
+    const sourcePath = join(LEGACY_CACHE_DIR, file);
+    const targetPath = join(targetDir, file);
+    if (existsSync(targetPath)) continue;
+    try {
+      renameSync(sourcePath, targetPath);
+    } catch {
+      // Best-effort migration; fresh fetches still work if a file cannot move.
+    }
+  }
+
+  try {
+    const remaining = readdirSync(LEGACY_CACHE_DIR);
+    if (remaining.length === 0) {
+      rmdirSync(LEGACY_CACHE_DIR);
+    }
+  } catch {
+    // Leave legacy dir in place if removal fails.
   }
 }
 
@@ -33,7 +77,7 @@ function cacheKey(key: string): string {
 }
 
 function cachePath(key: string): string {
-  return join(CACHE_DIR, `${cacheKey(key)}.json`);
+  return join(getCacheDirectory(), `${cacheKey(key)}.json`);
 }
 
 // Generic T lets callers specify the cached shape at the call site (e.g. getCached<OsvQueryResult>).
@@ -69,9 +113,10 @@ export function setCache<T>(key: string, data: T, opts: Partial<CacheOptions> = 
 }
 
 export function clearCache(): void {
-  if (existsSync(CACHE_DIR)) {
-    for (const file of readdirSync(CACHE_DIR)) {
-      unlinkSync(join(CACHE_DIR, file));
+  const dir = getCacheDirectory();
+  if (existsSync(dir)) {
+    for (const file of readdirSync(dir)) {
+      unlinkSync(join(dir, file));
     }
   }
 }

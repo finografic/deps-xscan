@@ -76,6 +76,10 @@ No `export` prefix needed when the token lives in that project's `.env`.
 - **GitHub Advisory Database** works without a token (rate limits apply); a token increases limits.
 - **Dependabot alerts** require a token with **Dependabot alerts: read** (fine-grained) or `repo` / `security_events` (classic PAT).
 
+### Cache
+
+API responses are cached as hashed JSON files under `~/.config/finografic/deps-xscan/cache/` (XDG; honors `XDG_CONFIG_HOME`). Default TTL is 24 hours (`--cache-ttl`, `--no-cache` to bypass). This is separate from the scan **report** (`deps-xscan-report.json` in the project directory by default).
+
 ## Exit codes
 
 | Code | Meaning                                                |

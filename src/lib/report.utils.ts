@@ -82,17 +82,16 @@ function printTerminalReport(
   if (dependencyFindings.length > 0) {
     console.log();
     console.log(pc.bold(pc.red('  🔍 Dependency Vulnerabilities')));
-    console.log(pc.dim(HR_SEPARATOR));
 
     const grouped = groupBySeverity(dependencyFindings);
 
     for (const [severity, findings] of grouped) {
       if (findings.length === 0) continue;
-      const sevColor = severityColor(severity);
 
       console.log();
-      console.log(sevColor(`  == ${severity.toUpperCase()} (${findings.length}) ==`));
+      printSeveritySectionHeader(severity, findings.length);
 
+      const sevColor = severityColor(severity);
       for (const f of findings) {
         const directLabel = f.isDirect
           ? pc.yellow(` [direct ${f.dependencyKind}]`)
@@ -252,6 +251,13 @@ function printSummaryBar(summary: CorrelationResult['summary']): void {
   } else {
     console.log(pc.green('  No vulnerabilities found ✓'));
   }
+}
+
+function printSeveritySectionHeader(severity: string, count: number): void {
+  const label = `${severity.toUpperCase()} vulnerabilities (${count})`;
+  const dashCount = Math.max(0, HR_SEPARATOR.length - label.length - 1);
+  const sevColor = severityColor(severity);
+  console.log(`${sevColor(label)} ${pc.dim('─'.repeat(dashCount))}`);
 }
 
 function severityColor(severity: string): (s: string) => string {

@@ -2,6 +2,7 @@ import { execSync } from 'node:child_process';
 import { tasks } from '@clack/prompts';
 
 import type { CacheOptions } from 'lib/cache.utils';
+import { getCacheDirectory } from 'lib/cache.utils';
 import { correlate } from 'lib/correlate.utils';
 import { loadProjectEnv } from 'lib/env.utils';
 import {
@@ -68,6 +69,9 @@ export async function runScanPipeline(options: ScanOptions): Promise<number> {
 
   loadProjectEnv(options.project);
   log('Loaded .env from project root (if present)', options.verbose);
+  if (!options.noCache) {
+    log(`  API cache directory: ${getCacheDirectory()}`, options.verbose);
+  }
 
   log('Stage 1: Parsing lockfile...', options.verbose);
   const lockResult = parseLockfile(options.project);

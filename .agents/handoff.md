@@ -20,7 +20,7 @@ Six-stage pipeline in `src/commands/scan/scan.logic.ts`:
 Supporting modules:
 
 - `src/lib/env.utils.ts` — loads `.env` / `.env.local` from scanned project root (shell env wins)
-- `src/lib/cache.utils.ts` — TTL disk cache in `~/.deps-xscan-cache`
+- `src/lib/cache.utils.ts` — TTL disk cache in `~/.config/finografic/deps-xscan/cache/` (XDG via `@finografic/cli-kit/xdg`)
 - `src/constants/security-sources.constants.ts` — source IDs and display labels
 - `src/constants/source-endpoints.constants.ts` — API bases, GitHub headers, token env fallbacks
 - `src/constants/source-limits.constants.ts` — page/batch sizes
