@@ -35,7 +35,7 @@ function printTerminalReport(result: CorrelationResult): void {
   console.log(
     pc.bold(pc.white('║')) +
       pc.bold(pc.cyan('  deps-xscan — Security Report')) +
-      pc.bold(pc.white('                 ║')),
+      pc.bold(pc.white('                        ║')),
   );
   console.log(pc.bold(pc.white('╚══════════════════════════════════════════════════════╝')));
   console.log();
@@ -79,7 +79,7 @@ function printTerminalReport(result: CorrelationResult): void {
 
       for (const f of findings) {
         const directLabel = f.isDirect
-          ? pc.yellow(' [direct]')
+          ? pc.yellow(` [direct ${f.dependencyKind}]`)
           : f.isPeer
             ? pc.magenta(' [peer]')
             : pc.dim(' [transitive]');
@@ -91,11 +91,26 @@ function printTerminalReport(result: CorrelationResult): void {
         console.log(`    ${pc.dim('ID:')}     ${f.id}`);
         console.log(`    ${pc.dim('Type:')}   ${f.type}`);
         console.log(`    ${pc.dim('Title:')}  ${f.title.slice(0, 80)}`);
+        if (f.description) {
+          console.log(`    ${pc.dim('Info:')}   ${singleLine(f.description, 100)}`);
+        }
+        if (f.affectedVersions !== 'unknown') {
+          console.log(`    ${pc.dim('Range:')}  ${f.affectedVersions}`);
+        }
 
         if (f.fixedIn) {
           console.log(`    ${pc.dim('Fix:')}    Upgrade to ${pc.green(f.fixedIn)}`);
         } else {
-          console.log(`    ${pc.dim('Fix:')}    ${pc.red('No fix available')}`);
+          console.log(`    ${pc.dim('Fix:')}    ${pc.red('No fixed version found in advisory')}`);
+        }
+
+        console.log(`    ${pc.dim('Via:')}    ${formatDependencyPaths(f)}`);
+        console.log(`    ${pc.dim('Risk:')}   ${f.riskContext}`);
+        console.log(`    ${pc.dim('Action:')} ${f.action}`);
+
+        const reference = f.references[0];
+        if (reference) {
+          console.log(`    ${pc.dim('Ref:')}    ${reference}`);
         }
 
         const sourceLabels = f.sources.map((s) =>
@@ -118,6 +133,18 @@ function printTerminalReport(result: CorrelationResult): void {
   console.log(pc.dim('  Note: This scan is a point-in-time snapshot. New vulns may be'));
   console.log(pc.dim('  disclosed at any time. Run regularly for best coverage.'));
   console.log();
+}
+
+function singleLine(text: string, maxLength: number): string {
+  const cleaned = text.replace(/\s+/g, ' ').trim();
+  if (cleaned.length <= maxLength) return cleaned;
+  return `${cleaned.slice(0, maxLength - 1)}…`;
+}
+
+function formatDependencyPaths(finding: Finding): string {
+  const paths = finding.dependencyPaths.slice(0, 2).map((path) => path.join(' -> '));
+  const suffix = finding.dependencyPaths.length > 2 ? ` (+${finding.dependencyPaths.length - 2} more)` : '';
+  return `${paths.join('; ')}${suffix}`;
 }
 
 function printSummaryBar(summary: CorrelationResult['summary']): void {

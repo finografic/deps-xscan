@@ -11,16 +11,16 @@ pnpm add -g @finografic/deps-xscan
 ## Usage
 
 ```bash
-deps-xscan                          # scan current directory
-deps-xscan --project ./my-app       # scan a specific project
-deps-xscan --verbose                # show per-stage progress
-deps-xscan --no-cache               # force fresh fetch of all data sources
-deps-xscan --format json --json-out report.json
+xscan                               # scan current directory
+xscan --project ./my-app            # scan a specific project
+xscan --verbose                     # show per-stage progress
+xscan --no-cache                    # force fresh fetch of all data sources
+xscan --format json --json-out report.json
 ```
 
 ## What it does
 
-Unlike `npm audit`, `deps-xscan` cross-references your resolved lockfile against three sources:
+Unlike `npm audit`, `xscan` cross-references your resolved lockfile against three sources:
 
 - **OSV.dev** — open, comprehensive vulnerability database, queried per resolved dep version
 - **Node.js security blog** — last N release posts scraped and parsed for CVEs, matched against your engine version

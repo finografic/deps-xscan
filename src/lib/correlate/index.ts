@@ -10,11 +10,16 @@ export interface Finding {
   installedVersion: string;
   isDirect: boolean;
   isPeer: boolean;
+  dependencyKind: ResolvedDep['dependencyKind'];
+  dependencyPaths: string[][];
   severity: 'Critical' | 'High' | 'Medium' | 'Low' | 'Unknown';
   type: string;
   title: string;
   description: string;
+  affectedVersions: string;
   fixedIn: string | null;
+  action: string;
+  riskContext: string;
   sources: Array<'node-blog' | 'osv'>;
   references: string[];
 }
@@ -119,11 +124,16 @@ function correlateDependencies(
         installedVersion: osvResult.packageVersion,
         isDirect: dep?.isDirect ?? false,
         isPeer: dep?.isPeer ?? false,
+        dependencyKind: dep?.dependencyKind ?? 'transitive',
+        dependencyPaths: dep?.dependencyPaths ?? [[osvResult.packageName]],
         severity: vuln.severity === 'Unknown' ? 'Medium' : vuln.severity,
         type: classifyFromDescription(vuln.summary + ' ' + vuln.details),
         title: vuln.summary || vuln.id,
         description: vuln.details.slice(0, 300),
+        affectedVersions: vuln.affectedVersions,
         fixedIn: vuln.fixedIn,
+        action: suggestedAction(osvResult.packageName, dep, vuln.fixedIn),
+        riskContext: riskContext(dep),
         sources: ['osv'],
         references: vuln.references,
       });
@@ -145,6 +155,48 @@ function correlateDependencies(
   }
 
   return [...findingsMap.values()];
+}
+
+function suggestedAction(packageName: string, dep: ResolvedDep | undefined, fixedIn: string | null): string {
+  const target = fixedIn ? `${packageName}@${fixedIn}` : packageName;
+
+  if (!dep || dep.dependencyKind === 'transitive') {
+    const parent = dep?.dependencyPaths[0]?.at(-2);
+    return parent
+      ? `Update the parent dependency that brings this in, starting with ${parent}.`
+      : `Update the parent dependency that brings in ${packageName}.`;
+  }
+
+  if (dep.dependencyKind === 'prod') {
+    return `Update runtime dependency to ${target}.`;
+  }
+
+  if (dep.dependencyKind === 'dev') {
+    return `Update dev dependency to ${target}.`;
+  }
+
+  return `Update peer dependency range to allow ${target}.`;
+}
+
+function riskContext(dep: ResolvedDep | undefined): string {
+  if (!dep) return 'Dependency relationship could not be resolved from the lockfile.';
+
+  if (dep.dependencyKind === 'prod') {
+    return 'Direct runtime dependency; prioritize because it can affect package consumers.';
+  }
+
+  if (dep.dependencyKind === 'dev') {
+    return 'Direct dev dependency; usually affects local tooling, tests, builds, or publishing.';
+  }
+
+  if (dep.dependencyKind === 'peer') {
+    return 'Peer dependency; review the supported version range and consuming projects.';
+  }
+
+  const root = dep.dependencyPaths[0]?.[0];
+  return root
+    ? `Transitive dependency via ${root}; update the nearest parent dependency when possible.`
+    : 'Transitive dependency; update the parent dependency when possible.';
 }
 
 function classifyFromDescription(text: string): string {
