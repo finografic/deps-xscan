@@ -1,109 +1,75 @@
-# TODO and DONE Documentation Conventions
+# TODO, DONE, and Roadmap Documentation Conventions
 
-Rules for creating, maintaining, and graduating planning documents in `docs/todo/`.
+Rules for planning docs, working docs, and completion records.
 
----
+## Locations
+
+- `docs/todo/` holds task-level planning docs and completion records
+- `docs/todo/ROADMAP.md` holds the repo or package roadmap
+- `docs/todo/NEXT_STEPS.md` is optional for medium to large, actively evolving projects
+- `docs/investigation/` is optional for deeper debugging, audits, and research
+- `docs/taxonomy/` is optional for larger systems that need structure, domain models, or content maps
 
 ## File Naming
 
-| State                   | Prefix  | Example                    |
-| ----------------------- | ------- | -------------------------- |
-| Active — work remaining | `TODO_` | `TODO_TERMINAL_PANEL.md`   |
-| Partially done          | `TODO_` | `TODO_OXLINT_MIGRATION.md` |
-| Fully complete          | `DONE_` | `DONE_AGENT_LOOP.md`       |
+| State                   | Prefix  | Example                  |
+| ----------------------- | ------- | ------------------------ |
+| Active — work remaining | `TODO_` | `TODO_TERMINAL_PANEL.md` |
+| Fully complete          | `DONE_` | `DONE_TERMINAL_PANEL.md` |
 
-Never delete completed docs. Rename `TODO_` → `DONE_` when **all** tracked work is done.
-Keep `DONE_` files in `docs/todo/` as a permanent record.
+- Use underscore separators, not dots: `TODO_FEATURE_NAME.md`
+- Keep `TODO_` while any tracked work remains
+- Rename `TODO_` to `DONE_` only when the work is fully complete
+- Do not delete completed docs; keep `DONE_` files in `docs/todo/`
 
----
+## TODO and DONE Doc Format
 
-## Status Header
+- Title must match file state: `# TODO — Feature Name` or `# DONE — Feature Name`
+- Add a status line immediately under the title
+- Use absolute ISO dates: `YYYY-MM-DD`
+- Use checklists for phased or multi-step work
 
-Every file must open with a blockquote status line immediately after the `#` heading.
-
-### Active TODO
+Examples:
 
 ```markdown
-> **Status:** Not started.
+# TODO — Terminal Panel
+> **Status:** Phase 1 complete (2026-04-17). Phase 2 not started.
 ```
 
 ```markdown
-> **Status:** Phase 1 complete (2026-04-17). Phases 2–3 not started.
+# DONE — Terminal Panel
+> **Completed:** 2026-04-16 — terminal panel shipped.
 ```
 
-### DONE
+## Maintaining TODO Docs
 
-```markdown
-> **Completed:** 2026-04-16 — one-line summary of what was built.
-```
+- Update the doc as work progresses; do not leave it stale
+- Keep implementation notes concise and action-oriented
+- Use `- [ ]` and `- [x]` to show remaining vs completed work
+- For larger docs, include a `## Done` section near the end for completed items or phases
 
-Always use absolute ISO dates (`YYYY-MM-DD`), never relative ones ("last week", "recently").
+## Graduation Checklist
 
----
+When work is complete:
 
-## Title Line
-
-Match the prefix to the file state:
-
-```markdown
-# TODO — Feature Name      ← active or partial
-# DONE — Feature Name      ← fully complete
-```
-
-Update the title when renaming the file.
-
----
-
-## Checkboxes for Phased Work
-
-Use `- [ ]` / `- [x]` for any multi-step or multi-phase work. This is what determines
-whether a file stays `TODO_` or graduates to `DONE_`:
-
-- At least one `- [ ]` unchecked → file stays `TODO_`
-- All items checked **or** no items exist and work is done → rename to `DONE_`
-
-Group checkboxes under phase headings when the work has distinct phases:
-
-```markdown
-## Progress
-
-- [x] Phase 1 — scaffolding done (2026-04-17)
-- [ ] Phase 2 — audit rule coverage
-- [ ] Phase 3 — replace ESLint in CI
-```
-
----
-
-## NEXT_STEPS.md
-
-`docs/todo/NEXT_STEPS.md` is the maintained near-term working list. Rules:
-
-- **References, never rewrites** ROADMAP.md items — link to them, don't duplicate descriptions
-- Covers things too small for ROADMAP: manual testing checklists, code polish, small fixes
-- Has a **Manual Testing Checklist** section with `- [ ]` items for recently shipped features
-- Ordered by actionability — what to do _now_ at the top, longer-horizon below
-- Update this file at the end of every significant session
-
----
+1. Rename `TODO_FEATURE_NAME.md` to `DONE_FEATURE_NAME.md`
+2. Update the title from `# TODO` to `# DONE`
+3. Replace the status line with a completion line
+4. Update any links pointing to the old filename
+5. If the work appears in `docs/todo/ROADMAP.md` or `docs/todo/NEXT_STEPS.md`, update those references too
 
 ## ROADMAP.md
 
-`docs/todo/ROADMAP.md` is for large initiatives only (P0–P3 tier). Do not add small fixes,
-manual testing tasks, or session-scoped tasks to ROADMAP. Those belong in `NEXT_STEPS.md`.
+- ROADMAP is for larger initiatives, themes, and sequencing
+- Keep it concise and structured
+- Include a `## Done` section at the end for completed roadmap items
+- Link to supporting `TODO_` or `DONE_` docs when detail exists
+- Do not use ROADMAP for session notes, small fixes, or manual testing checklists
 
-When a ROADMAP item is completed:
+## NEXT_STEPS.md
 
-1. Move it to the `## Done` table at the bottom with a completion date
-2. Rename its detail doc from `TODO_` → `DONE_` if one exists
-
----
-
-## Graduation Checklist (TODO → DONE)
-
-When renaming a file:
-
-1. Rename file: `TODO_FOO.md` → `DONE_FOO.md`
-2. Update title: `# TODO — Foo` → `# DONE — Foo`
-3. Update status header: `> **Completed:** YYYY-MM-DD — summary`
-4. Update any links in `ROADMAP.md` or `NEXT_STEPS.md` that point to the old filename
-5. Move the item to the `## Done` table in `ROADMAP.md` if it was listed there
+- `docs/todo/NEXT_STEPS.md` is optional
+- Use it for medium to large projects that are active and growing
+- Keep it near-term and action-oriented
+- It can reference roadmap items, but should not replace `docs/todo/ROADMAP.md`
+- Good uses: follow-ups, manual testing, cleanup, short-horizon implementation tasks

@@ -18,11 +18,12 @@ dep-scan-report.json
 .env.*.local
 
 # Agents
+.agents/*
+!.agents/
+!.agents/handoff.md
 .codex/
 .claude/
 !.claude/settings.json
-.ai/
-!.ai/handoff.md
 .worktrees/
 **/worktrees/
 
@@ -57,9 +58,8 @@ coverage/
 *.tsbuildinfo
 
 # macOS
-**/.DS_Store
+.DS_Store
 **Thumbs.db
-Icon?
 
 # Windows
 Thumbs.db

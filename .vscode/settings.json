@@ -6,7 +6,9 @@
   "editor.defaultFormatter": "oxc.oxc-vscode",
   "editor.codeActionsOnSave": {
     "source.fixAll.oxc": "explicit",
-    "source.organizeImports": "explicit"
+    "source.organizeImports": "never",
+    "source.sortImports": "explicit",
+    "source.addMissingImports": "explicit"
   },
 
   "eslint.enable": false,
@@ -45,7 +47,7 @@
   "[scss]": {
     "editor.defaultFormatter": "oxc.oxc-vscode"
   },
-"markdownlint.config": {
+  "markdownlint.config": {
     "default": true,
     "MD013": {
       "line_length": 120,
@@ -61,7 +63,5 @@
       "style": "aligned"
     }
   },
-"markdown.styles": [
-    "node_modules/@finografic/md-lint/styles/markdown-github-light.css"
-  ]
+  "markdown.styles": ["node_modules/@finografic/md-lint/styles/markdown-github-light.css"]
 }

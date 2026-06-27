@@ -11,7 +11,7 @@ All file references use paths relative to the project root — no leading slash,
 ```md
 ✅ `.github/instructions/05-documentation.instructions.md`
 ✅ `AGENTS.md`
-✅ `.github/skills/scaffold-feature/SKILL.md`
+✅ `.github/skills/maintain-agents/SKILL.md`
 
 ❌ `/AGENTS.md`
 ❌ `./helper.ts`
@@ -52,7 +52,7 @@ Default to backtick paths. A Markdown link signals "read this now" — use links
 
 # Exception — read-before-acting (use sparingly)
 
-[scaffold-feature](/.github/skills/scaffold-feature/SKILL.md)
+[maintain-agents](/.github/skills/maintain-agents/SKILL.md)
 ```
 
 When a Markdown link is used, it MUST still use a repo-root relative path.
@@ -64,7 +64,7 @@ When listing multiple files, group them by purpose.
 ```md
 Skills:
 
-- `.github/skills/scaffold-feature/SKILL.md`
+- `.github/skills/maintain-agents/SKILL.md`
 - `.github/skills/scaffold-cli-help/SKILL.md`
 
 Instructions:

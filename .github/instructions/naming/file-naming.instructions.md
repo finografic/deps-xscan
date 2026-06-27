@@ -37,4 +37,4 @@ src/
 
 ## Config Files
 
-- Keep configs in project root (e.g., `tsdown.config.ts`, `tsup.config.ts`, `eslint.config.ts`).
+- Keep configs in project root (e.g., `tsdown.config.ts`, `oxlint.config.ts`, `oxfmt.config.ts`).
