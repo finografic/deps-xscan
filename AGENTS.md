@@ -66,7 +66,10 @@ Shared across Claude Code, Cursor, and GitHub Copilot.
 ## Rules — Markdown Tables
 
 - Padded pipes: one space on each side of every `|`, including the separator row.
-- Align column widths so all cells in the same column are equal width.
+- **Do NOT manually align column widths or pad cells to equal width.** `oxfmt` (run automatically
+  by lint-staged on commit and by `pnpm format:fix`) fixes table alignment automatically. Spending
+  tokens counting characters and iterating on spacing is wasted effort — write the content, let the
+  formatter handle alignment.
 
 ---
 
@@ -85,6 +88,7 @@ Shared across Claude Code, Cursor, and GitHub Copilot.
 - Align Finografic CLIs with `@finografic/cli-kit` as the canonical pattern — do not vend local `src/core/` or follow stale CLI_CORE.md guidance.
 - When oxlint flags intentional return-type-only generics, extend or suppress them rather than removing the type parameter.
 - Store GitHub PATs as `NPM_TOKEN` in project `.env` files (not `GITHUB_TOKEN` — GitHub reserves that name).
+- Summary badges with nested picocolors bg+fg need explicit ANSI via `summaryBadge()` — nesting resets fg before bg closes; `dim` does not dim backgrounds.
 
 ## Learned Workspace Facts
 
@@ -96,5 +100,9 @@ Shared across Claude Code, Cursor, and GitHub Copilot.
 - Dev-only stage runners live in `scripts/dev-*.ts` as thin wrappers around `src/lib/*`.
 - GitHub Advisory Database is on by default; Dependabot alerts require `--dependabot`.
 - GitHub token: load `.env`/`.env.local` from scanned project root; auto-detect `NPM_TOKEN` → `GH_TOKEN` → `GITHUB_TOKEN`; override via `--github-token-env` (comma-separated) or `GITHUB_TOKEN_FILE`.
+- API cache: hashed JSON under `~/.config/finografic/deps-xscan/cache/` via `@finografic/cli-kit/xdg` `createXdgPaths()`; legacy `~/.deps-xscan-cache` migrates on first write.
+- Scan report (`deps-xscan-report.json` in scanned project, or `--json-out`) is distinct from API cache.
+- Lockfile anchors package/version resolution; findings merge OSV, GitHub Advisory, Node blog, and optional Dependabot. Supports pnpm/npm lockfiles only (not yarn yet).
+- Finografic config convention: store package config under `~/.config/finografic/`; use subfolders for multi-file caches.
 
 ---
