@@ -80,6 +80,7 @@ Shared across Claude Code, Cursor, and GitHub Copilot.
 ## Learned User Preferences
 
 - Use `fix:` for runtime or behavior bugs only; use `chore:` for lint, typecheck, and tooling-only changes.
+- Do not put implementation code in `index.ts`; reserve `index.ts` for barrel/index re-exports, with rare small folder/domain constants allowed when they belong to the public surface.
 - Reserve `scripts/` for thin package.json runners (tsx); move application code into `src/` subfolders such as `lib/`, `commands/`, and `utils/`.
 - Align Finografic CLIs with `@finografic/cli-kit` as the canonical pattern — do not vend local `src/core/` or follow stale CLI_CORE.md guidance.
 - When oxlint flags intentional return-type-only generics, extend or suppress them rather than removing the type parameter.
