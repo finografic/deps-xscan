@@ -1,14 +1,12 @@
-import type { CacheOptions } from './cache';
-
-import { getCached, setCache } from './cache';
-import { isCliMain } from './is-cli-main';
+import type { CacheOptions } from 'lib/cache';
+import { getCached, setCache } from 'lib/cache';
 
 export interface OsvVulnerability {
-  id: string; // e.g. "GHSA-xxxx-xxxx-xxxx" or "CVE-2024-xxxxx"
+  id: string;
   summary: string;
   details: string;
   severity: 'Critical' | 'High' | 'Medium' | 'Low' | 'Unknown';
-  aliases: string[]; // cross-references (CVE ↔ GHSA)
+  aliases: string[];
   affectedVersions: string;
   fixedIn: string | null;
   references: string[];
@@ -25,9 +23,6 @@ export interface OsvQueryResult {
 const OSV_API_BASE = 'https://api.osv.dev/v1';
 const CACHE_KEY_PREFIX = 'osv-query';
 
-/**
- * Query OSV.dev for vulnerabilities affecting a single package version.
- */
 export async function queryOsvSingle(
   name: string,
   version: string,
@@ -69,17 +64,12 @@ export async function queryOsvSingle(
   return result;
 }
 
-/**
- * Batch query OSV.dev for multiple packages. OSV supports batch via /v1/querybatch — more efficient than
- * individual calls.
- */
 export async function queryOsvBatch(
   packages: Array<{ name: string; version: string }>,
   cacheOpts: Partial<CacheOptions> = {},
 ): Promise<OsvQueryResult[]> {
   const fetch = (await import('node-fetch')).default;
 
-  // Check cache first, split into cached vs uncached
   const results: OsvQueryResult[] = [];
   const uncached: Array<{ name: string; version: string; index: number }> = [];
 
@@ -101,7 +91,6 @@ export async function queryOsvBatch(
 
   console.log(`[osv] Querying ${uncached.length} packages (${packages.length - uncached.length} cached)`);
 
-  // Batch in chunks of 100 (OSV batch limit)
   const BATCH_SIZE = 100;
   for (let offset = 0; offset < uncached.length; offset += BATCH_SIZE) {
     const chunk = uncached.slice(offset, offset + BATCH_SIZE);
@@ -120,7 +109,6 @@ export async function queryOsvBatch(
 
       if (!res.ok) {
         console.warn(`[osv] Batch query failed (${res.status}), falling back to individual queries`);
-        // Fallback to individual queries
         for (const item of chunk) {
           results[item.index] = await queryOsvSingle(item.name, item.version, cacheOpts);
         }
@@ -141,7 +129,6 @@ export async function queryOsvBatch(
 
         results[index] = result;
 
-        // Cache individual results
         const cacheKey = `${CACHE_KEY_PREFIX}-${name}@${version}`;
         setCache(cacheKey, result, cacheOpts);
       }
@@ -160,9 +147,6 @@ export async function queryOsvBatch(
   return results;
 }
 
-/**
- * Parse a raw OSV vulnerability object into our normalized format.
- */
 function parseOsvVuln(raw: any): OsvVulnerability {
   const severity = extractSeverity(raw);
   const affected = raw.affected?.[0] || {};
@@ -197,11 +181,7 @@ function parseOsvVuln(raw: any): OsvVulnerability {
   };
 }
 
-/**
- * Extract severity from OSV CVSS data or database-specific severity.
- */
 function extractSeverity(raw: any): OsvVulnerability['severity'] {
-  // Check database_specific severity
   const dbSeverity = raw.database_specific?.severity;
   if (dbSeverity) {
     const upper = dbSeverity.toUpperCase();
@@ -211,7 +191,6 @@ function extractSeverity(raw: any): OsvVulnerability['severity'] {
     if (upper === 'LOW') return 'Low';
   }
 
-  // Check CVSS score from severity array
   const severityEntries = raw.severity || [];
   for (const entry of severityEntries) {
     if (entry.score !== undefined) {
@@ -220,34 +199,7 @@ function extractSeverity(raw: any): OsvVulnerability['severity'] {
       if (entry.score >= 4.0) return 'Medium';
       return 'Low';
     }
-    // Try parsing from CVSS vector string
-    if (entry.type === 'CVSS_V3' && entry.score === undefined) {
-      // Rough extraction from vector — look for base score
-      const scoreMatch = entry.vector?.match(/CVSS:3\.\d\/.*?/);
-      if (scoreMatch) continue; // Can't easily extract numeric score from vector alone
-    }
   }
 
   return 'Unknown';
-}
-
-// CLI entry point
-if (isCliMain(import.meta.url)) {
-  const name = process.argv[2];
-  const version = process.argv[3];
-
-  if (!name || !version) {
-    console.error('Usage: query-osv.ts <package-name> <version>');
-    process.exit(1);
-  }
-
-  queryOsvSingle(name, version)
-    .then((result) => {
-      console.log(JSON.stringify(result, null, 2));
-      return result;
-    })
-    .catch((err) => {
-      console.error(`Error: ${err.message}`);
-      process.exit(1);
-    });
 }

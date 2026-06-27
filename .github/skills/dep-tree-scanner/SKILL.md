@@ -24,9 +24,9 @@ dependency security analysis by combining data sources that typical tools check 
 
 ```
 package:   @finografic/deps-xscan
-bin:       deps-xscan
-repo:      ~/repos-p/deps-xscan/
-skill:     ~/.claude/skills/dep-tree-scanner/   ← you are here
+bin:       xscan
+repo:      @finografic/deps-xscan
+skill:     .github/skills/dep-tree-scanner/
 ```
 
 ## Repo structure (for reference)
@@ -34,21 +34,13 @@ skill:     ~/.claude/skills/dep-tree-scanner/   ← you are here
 ```
 deps-xscan/
 ├── src/
-│   ├── cli.ts                        # CLI entrypoint — parses argv, calls orchestrator
-│   ├── deps-xscan.help.ts              # Help text
-│   └── index.ts                      # Public API surface
-├── scripts/                          # Internal pipeline stages (not part of built output)
-│   ├── orchestrator.ts               # Coordinates all stages
-│   ├── parse-lockfile.ts             # Extracts resolved deps from npm/pnpm lockfiles
-│   ├── scrape-node-posts.ts          # Fetches + parses Node.js security blog posts
-│   ├── query-osv.ts                  # Queries OSV.dev API (batched)
-│   ├── correlate.ts                  # Matches vulns → project deps
-│   ├── report.ts                     # Styled terminal + JSON output
-│   └── cache.ts                      # TTL-based disk cache (default 24h)
-└── docs/
-    └── spec/
-        ├── CLI_CORE.md               # CLI design spec
-        └── severity-taxonomy.md      # Vuln categorization guide (read when classifying)
+│   ├── cli.ts                        # CLI entry — routes commands via cli-kit
+│   ├── cli.help.ts                   # Root HelpConfig (cli-kit render-help)
+│   ├── commands/scan/                # Scan command (flow flags + pipeline)
+│   └── lib/                          # Pipeline stages (lockfile, osv, correlate, …)
+├── scripts/                          # Thin dev runners only (dev-*.ts)
+└── docs/spec/
+    └── severity-taxonomy.md          # Vuln categorization guide
 ```
 
 ## How to invoke

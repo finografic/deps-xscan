@@ -23,7 +23,7 @@
     "url": "git+https://github.com/finografic/deps-xscan.git"
   },
   "bin": {
-    "xscan": "./dist/index.mjs"
+    "deps-xscan": "./dist/index.mjs"
   },
   "files": [
     "dist"
@@ -46,14 +46,13 @@
     "link": "pnpm build && pnpm link --global",
     "unlink": "pnpm unlink --global",
     "---------- SCANNER": "---------------------------------------------------",
-    "scan": "tsx scripts/orchestrator.ts",
-    "scan:verbose": "tsx scripts/orchestrator.ts --verbose",
-    "scan:json": "tsx scripts/orchestrator.ts --format json",
-    "scan:no-cache": "tsx scripts/orchestrator.ts --no-cache --verbose",
-    "script:parse-lockfile": "tsx scripts/parse-lockfile.ts",
-    "script:scrape-posts": "tsx scripts/scrape-node-posts.ts",
-    "script:query-osv": "tsx scripts/query-osv.ts",
-    "script:correlate": "tsx scripts/correlate.ts",
+    "scan": "tsx src/cli.ts scan",
+    "scan:verbose": "tsx src/cli.ts scan --verbose",
+    "scan:json": "tsx src/cli.ts scan --format json",
+    "scan:no-cache": "tsx src/cli.ts scan --no-cache --verbose",
+    "script:parse-lockfile": "tsx scripts/dev-parse-lockfile.ts",
+    "script:scrape-posts": "tsx scripts/dev-scrape-posts.ts",
+    "script:query-osv": "tsx scripts/dev-query-osv.ts",
     "·········· TESTING": "···················································",
     "test": "vitest",
     "test:run": "vitest run",
@@ -77,7 +76,7 @@
     "view:registry:github": "pnpm view @finografic/deps-xscan --registry=https://npm.pkg.github.com",
     "·········· PACKAGES": "··················································",
     "update:oxc-config": "pnpm update @finografic/oxc-config --latest && pnpm update oxfmt --latest && pnpm update oxlint --latest",
-    "update:core": "pnpm update @finografic/core --latest",
+    "update:cli-kit": "pnpm update @finografic/cli-kit --latest",
     "update:md-lint": "pnpm update @finografic/md-lint --latest",
     "update:deps:all": "pnpm update --latest",
     "·········· UTILS": "·····················································",
@@ -85,9 +84,10 @@
     "typecheck": "tsc --project tsconfig.json --noEmit",
     "prepack": "pnpm build",
     "prepare": "husky",
-    "dev:cli": "NODE_ENV=development tsx src/cli.ts --"
+    "dev:cli": "NODE_ENV=development tsx src/cli.ts"
   },
   "dependencies": {
+    "@finografic/cli-kit": "^1.4.0",
     "js-yaml": "^4.1.1",
     "node-fetch": "^3.3.2",
     "picocolors": "^1.1.1",

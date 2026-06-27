@@ -1,6 +1,6 @@
 ---
 name: scaffold-cli-help
-description: Define or update root CLI help for @finografic CLI projects using HelpConfig in src/cli.help.ts and renderHelp from core/render-help. Use when adding commands, changing help layout, or aligning help with the normalized pattern.
+description: Define or update root CLI help for @finografic CLI projects using HelpConfig in src/cli.help.ts and renderHelp from @finografic/cli-kit/render-help. Use when adding commands, changing help layout, or aligning help with the normalized pattern.
 trigger: User asks to add or change CLI help, root help, cli.help.ts, HelpConfig, or renderHelp for a finografic CLI
 tools: [file-read, file-edit, terminal]
 ---
@@ -13,18 +13,15 @@ This skill applies the **typed root help** pattern used across `@finografic` CLI
 
 - `.github/instructions/project/cli-help-patterns.instructions.md` — rules, file locations, `HelpConfig` shape, examples/footer conventions.
 
-## Deeper spec (canonical — in this repo)
+## Deeper spec (canonical)
 
-- **`docs/spec/CLI_CORE.md`** — full **`core/render-help`** API (`HelpConfig`, `renderHelp`, section shapes), export table, and examples.
+- **`@finografic/cli-kit`** — `docs/spec/CLI_KIT.md` in the cli-kit repo; **`render-help`** subpath (`HelpConfig`, `renderHelp`, section shapes).
 
-**Optional context:** A temporary bulk-task folder in a monorepo (e.g. `___REFACTORING___`) may hold `REPORT_CLI_NORMALIZATION.md` with migration history. That path is **not** canonical; use it when you have it for background, not as the spec.
-
-Keep this skill **procedural**; link to `docs/spec/CLI_CORE.md` for authoritative types and tables.
+Keep this skill **procedural**; link to cli-kit for authoritative types and tables.
 
 ## Prerequisites
 
-- `src/core/render-help/` exists (shared module; do not rewrite the renderer unless intentionally changing `core/` across all CLI repos).
-- `tsconfig.json` includes `"core/*": ["./src/core/*"]` (or equivalent).
+- `@finografic/cli-kit/render-help` is the shared renderer — do not vend a local `src/core/render-help` copy.
 - You know the CLI **binary name** (e.g. `genx`) and the **commands** to list.
 
 ## Procedure
@@ -34,7 +31,7 @@ Keep this skill **procedural**; link to `docs/spec/CLI_CORE.md` for authoritativ
 2. **Import types** from the barrel only:
 
    ```ts
-   import type { HelpConfig } from 'core/render-help';
+   import type { HelpConfig } from '@finografic/cli-kit/render-help';
    ```
 
    Do not import help types from `src/types/` or `utils/`.
@@ -52,7 +49,7 @@ Keep this skill **procedural**; link to `docs/spec/CLI_CORE.md` for authoritativ
    - **examples:** `label` = human description, `description` = exact command line.
    - **footer:** `label` may use `<placeholder>` tokens; `description` optional dim line.
 
-5. **Wire `src/cli.ts`:** import `renderHelp` from `core/render-help` and `cliHelp` from `./cli.help.js` (use `.js` extension if the project uses `verbatimModuleSyntax`). Call `renderHelp(cliHelp)` only from the CLI entry / help branch — **not** inside `cli.help.ts`.
+5. **Wire `src/cli.ts`:** import `renderHelp` from `@finografic/cli-kit/render-help` and `cliHelp` from `./cli.help.js` (use `.js` extension if the project uses `verbatimModuleSyntax`). Call `renderHelp(cliHelp)` only from the CLI entry / help branch — **not** inside `cli.help.ts`.
 
 6. **Optional shared defaults:** genx uses `defaultHelpOptions` from `config/help.config` for `minWidth` / alignment — follow existing project pattern if present.
 

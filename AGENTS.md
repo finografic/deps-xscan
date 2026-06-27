@@ -76,3 +76,20 @@ Shared across Claude Code, Cursor, and GitHub Copilot.
 - `.github/instructions/git/git-policy.instructions.md` (see Commits and Releases sections)
 
 ---
+
+## Learned User Preferences
+
+- Use `fix:` for runtime or behavior bugs only; use `chore:` for lint, typecheck, and tooling-only changes.
+- Reserve `scripts/` for thin package.json runners (tsx); move application code into `src/` subfolders such as `lib/`, `commands/`, and `utils/`.
+- Align Finografic CLIs with `@finografic/cli-kit` as the canonical pattern — do not vend local `src/core/` or follow stale CLI_CORE.md guidance.
+- When oxlint flags intentional return-type-only generics, extend or suppress them rather than removing the type parameter.
+
+## Learned Workspace Facts
+
+- Scanner pipeline lives in `src/lib/` (five stages plus cache) and `src/commands/scan/`; CLI entry is `src/cli.ts` built to `dist/index.mjs` (`xscan`).
+- CLI infrastructure uses `@finografic/cli-kit` subpaths (`flow`, `render-help`, `commands`) — not local `src/core/`.
+- `@finografic/core` is not used in this project; do not add it unless a specific utility need arises.
+- `docs/spec/CLI_CORE.md` was removed as obsolete; the canonical CLI spec is `CLI_KIT.md` in the cli-kit repo.
+- Dev-only stage runners live in `scripts/dev-*.ts` as thin wrappers around `src/lib/*`.
+
+---

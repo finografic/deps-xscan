@@ -1,10 +1,11 @@
 import semver from 'semver';
-import type { ResolvedDep } from './parse-lockfile';
-import type { OsvQueryResult } from './query-osv';
-import type { ScrapedPost } from './scrape-node-posts';
+
+import type { ResolvedDep } from 'lib/lockfile';
+import type { ScrapedPost } from 'lib/node-posts';
+import type { OsvQueryResult } from 'lib/osv';
 
 export interface Finding {
-  id: string; // CVE or GHSA ID
+  id: string;
   packageName: string;
   installedVersion: string;
   isDirect: boolean;
@@ -47,10 +48,6 @@ export interface CorrelationResult {
   };
 }
 
-/**
- * Cross-reference the project's Node.js version against vulnerabilities found in the Node.js security blog
- * posts.
- */
 function correlateNodeVersion(nodeVersion: string | null, posts: ScrapedPost[]): NodeVersionFinding[] {
   if (!nodeVersion) return [];
 
@@ -61,14 +58,10 @@ function correlateNodeVersion(nodeVersion: string | null, posts: ScrapedPost[]):
 
   for (const post of posts) {
     for (const vuln of post.vulnerabilities) {
-      // Check if the project's Node version falls in the affected range
-      // The affectedVersions field is a rough semver range — try to match
       try {
         if (vuln.affectedVersions !== 'unknown') {
-          // Extract version numbers from the range string
           const patchedVersion = vuln.patchedIn;
           if (patchedVersion && patchedVersion !== 'unknown') {
-            // If our version is less than the patched version and in the same major line
             const cleanPatched = semver.clean(patchedVersion);
             if (
               cleanPatched &&
@@ -88,7 +81,7 @@ function correlateNodeVersion(nodeVersion: string | null, posts: ScrapedPost[]):
           }
         }
       } catch {
-        // semver parsing failed — skip this comparison
+        // semver parsing failed — skip
       }
     }
   }
@@ -96,24 +89,18 @@ function correlateNodeVersion(nodeVersion: string | null, posts: ScrapedPost[]):
   return findings;
 }
 
-/**
- * Cross-reference OSV results against the project's dependency tree. Merge with any matching CVEs from
- * Node.js blog posts for dep-level vulns.
- */
 function correlateDependencies(
   deps: ResolvedDep[],
   osvResults: OsvQueryResult[],
   posts: ScrapedPost[],
 ): Finding[] {
   const findingsMap = new Map<string, Finding>();
-
-  // Build a lookup of dep info by name@version
   const depLookup = new Map<string, ResolvedDep>();
+
   for (const dep of deps) {
     depLookup.set(`${dep.name}@${dep.version}`, dep);
   }
 
-  // Process OSV results
   for (const osvResult of osvResults) {
     const depKey = `${osvResult.packageName}@${osvResult.packageVersion}`;
     const dep = depLookup.get(depKey);
@@ -122,7 +109,6 @@ function correlateDependencies(
       const findingId = `${vuln.id}-${depKey}`;
 
       if (findingsMap.has(findingId)) {
-        // Already tracked — just add source
         findingsMap.get(findingId)!.sources.push('osv');
         continue;
       }
@@ -142,7 +128,6 @@ function correlateDependencies(
         references: vuln.references,
       });
 
-      // Check if this vuln ID has aliases that match node blog CVEs
       for (const alias of vuln.aliases) {
         for (const post of posts) {
           for (const nodeVuln of post.vulnerabilities) {
@@ -151,7 +136,6 @@ function correlateDependencies(
               if (!existing.sources.includes('node-blog')) {
                 existing.sources.push('node-blog');
               }
-              // Upgrade severity if node blog rates it higher
               existing.severity = higherSeverity(existing.severity, nodeVuln.severity);
             }
           }
@@ -163,9 +147,6 @@ function correlateDependencies(
   return [...findingsMap.values()];
 }
 
-/**
- * Basic vuln type classification from description text.
- */
 function classifyFromDescription(text: string): string {
   const lower = text.toLowerCase();
   const patterns: Array<[string, string]> = [
@@ -209,9 +190,6 @@ function higherSeverity(a: Finding['severity'], b: Finding['severity']): Finding
   return (rank[a] || 0) >= (rank[b] || 0) ? a : b;
 }
 
-/**
- * Main correlation: combine all data sources and produce the final result.
- */
 export function correlate(
   deps: ResolvedDep[],
   nodeVersion: string | null,
@@ -221,7 +199,6 @@ export function correlate(
   const nodeVersionFindings = correlateNodeVersion(nodeVersion, posts);
   const dependencyFindings = correlateDependencies(deps, osvResults, posts);
 
-  // Sort findings: Critical first, then High, then by direct > transitive
   dependencyFindings.sort((a, b) => {
     const severityRank: Record<string, number> = {
       Critical: 4,
@@ -232,7 +209,6 @@ export function correlate(
     };
     const sDiff = (severityRank[b.severity] || 0) - (severityRank[a.severity] || 0);
     if (sDiff !== 0) return sDiff;
-    // Direct deps first
     if (a.isDirect && !b.isDirect) return -1;
     if (!a.isDirect && b.isDirect) return 1;
     return 0;

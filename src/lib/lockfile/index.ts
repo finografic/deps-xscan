@@ -2,8 +2,6 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { load as loadYaml } from 'js-yaml';
 
-import { isCliMain } from './is-cli-main';
-
 export interface ResolvedDep {
   name: string;
   version: string;
@@ -26,7 +24,6 @@ export function parseLockfile(projectRoot: string): LockfileResult {
   const pnpmLockPath = join(projectRoot, 'pnpm-lock.yaml');
   const pkgJsonPath = join(projectRoot, 'package.json');
 
-  // Read package.json for direct dep detection + engine version
   let directDeps = new Set<string>();
   let peerDeps = new Set<string>();
   let nodeVersion: string | null = null;
@@ -41,7 +38,6 @@ export function parseLockfile(projectRoot: string): LockfileResult {
     nodeVersion = pkgJson.engines?.node || null;
   }
 
-  // Also check .nvmrc / .node-version
   if (!nodeVersion) {
     for (const f of ['.nvmrc', '.node-version']) {
       const p = join(projectRoot, f);
@@ -73,24 +69,18 @@ export function parseLockfile(projectRoot: string): LockfileResult {
   );
 }
 
-/**
- * Parse npm package-lock.json (v2/v3 format with "packages" field).
- */
 function parseNpmLock(lockPath: string, directDeps: Set<string>, peerDeps: Set<string>): ResolvedDep[] {
   const lock = JSON.parse(readFileSync(lockPath, 'utf-8'));
   const deps: ResolvedDep[] = [];
-
-  // v2/v3 format uses "packages" keyed by node_modules path
   const packages = lock.packages || {};
 
-  for (const [pkgPath, meta] of Object.entries(packages) as Array<[string, { version?: string }]>) {
-    // Skip the root entry (empty string key)
-    if (!pkgPath) continue;
+  for (const [pkgPath, meta] of Object.entries(packages)) {
+    if (!pkgPath || typeof meta !== 'object' || meta === null) continue;
 
-    // Extract package name from path like "node_modules/@scope/pkg"
+    const version = 'version' in meta && typeof meta.version === 'string' ? meta.version : undefined;
+
     const segments = pkgPath.replace(/^node_modules\//, '').split('node_modules/');
     const name = segments[segments.length - 1];
-    const { version } = meta;
 
     if (!name || !version) continue;
 
@@ -102,7 +92,6 @@ function parseNpmLock(lockPath: string, directDeps: Set<string>, peerDeps: Set<s
     });
   }
 
-  // Fallback for v1 format using "dependencies"
   if (deps.length === 0 && lock.dependencies) {
     parseNpmLockV1(lock.dependencies, directDeps, peerDeps, deps);
   }
@@ -125,31 +114,23 @@ function parseNpmLockV1(
         isPeer: peerDeps.has(name),
       });
     }
-    // Recurse into nested dependencies
     if (meta.dependencies) {
       parseNpmLockV1(meta.dependencies, directDeps, peerDeps, result);
     }
   }
 }
 
-/**
- * Parse pnpm-lock.yaml.
- */
 function parsePnpmLock(lockPath: string, directDeps: Set<string>, peerDeps: Set<string>): ResolvedDep[] {
   const raw = readFileSync(lockPath, 'utf-8');
   const lock = loadYaml(raw) as Record<string, Record<string, unknown>>;
   const deps: ResolvedDep[] = [];
-
-  // pnpm v9+ uses "snapshots" + "packages", older uses "packages" directly
   const packages = lock.packages || {};
 
   for (const [key] of Object.entries(packages)) {
-    // Keys look like "/@scope/name@1.2.3" or "/name@1.2.3" or "name@1.2.3"
     const match = key.match(/\/?(@?[^@]+)@(.+)/);
     if (!match) continue;
 
     const name = match[1];
-    // Version might include peer dep suffixes like "1.2.3(react@18.0.0)"
     const version = match[2].replace(/\(.*\)/, '').trim();
 
     deps.push({
@@ -161,16 +142,4 @@ function parsePnpmLock(lockPath: string, directDeps: Set<string>, peerDeps: Set<
   }
 
   return deps;
-}
-
-// CLI entry point
-if (isCliMain(import.meta.url)) {
-  const projectRoot = process.argv[2] || process.cwd();
-  try {
-    const result = parseLockfile(projectRoot);
-    console.log(JSON.stringify(result, null, 2));
-  } catch (err: any) {
-    console.error(`Error: ${err.message}`);
-    process.exit(1);
-  }
 }

@@ -1,12 +1,10 @@
 import { writeFileSync } from 'node:fs';
 import pc from 'picocolors';
-import type { CorrelationResult, Finding } from './correlate';
+
+import type { CorrelationResult, Finding } from 'lib/correlate';
 
 export type OutputFormat = 'terminal' | 'json' | 'both';
 
-/**
- * Generate the scan report in the requested format(s).
- */
 export function generateReport(
   result: CorrelationResult,
   format: OutputFormat = 'both',

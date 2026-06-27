@@ -1,25 +1,15 @@
 ---
 name: scaffold-core-module
-description: Add or modify a portable module under src/core/ in @finografic CLI projects — folder layout, barrel exports, TypeScript rules, and cross-repo propagation. Use when introducing new shared infrastructure or syncing core with gli/genx.
+description: Extend @finografic/cli-kit (preferred) or migrate consumer CLIs off local src/core. Use when adding cli-kit subpaths or syncing portable CLI infrastructure across finografic CLIs.
 trigger: User asks to add a core module, src/core, portable CLI infrastructure, flow, render-help, or sync core across finografic CLIs
 tools: [file-read, file-edit, terminal]
 ---
 
-# Scaffold / maintain a `src/core/` module
+# Scaffold / maintain portable CLI infrastructure
 
-This skill applies the **portable infrastructure layer** pattern: code in `src/core/` is treated like a shared library, kept in sync across `@finografic` CLI repos by convention.
+**Consumer CLIs (including deps-xscan):** use **`@finografic/cli-kit`** — do not add local `src/core/` copies. See **`@finografic/cli-kit/docs/spec/CLI_KIT.md`**.
 
-## Read first (repo — canonical for this repository)
-
-- `.github/instructions/project/core-module-patterns.instructions.md` — folder layout, rules, imports, picocolors, header comment, current module table.
-
-## Deeper spec (canonical — in this repo)
-
-- **`docs/spec/CLI_CORE.md`** — full **CLI Core Module Spec**: what `core/` is, TypeScript rules, consuming from app code, **Adding a New `core/` Module** checklist, and **Current Modules** (`core/flow/`, `core/render-help/`).
-
-**Optional context:** A monorepo may use a temporary bulk-task folder (e.g. `___REFACTORING___`) for staging reports during large migrations. That folder is **not** canonical. If `REPORT_CLI_NORMALIZATION.md` (or similar) exists there, it can add historical “why we moved” notes — use it when present; do not treat it as the source of truth for the spec.
-
-Use `docs/spec/CLI_CORE.md` when **designing a new module** or **documenting exports**; keep this skill as the **procedure**, not a duplicate of the spec.
+This skill applies when **extending the cli-kit package itself** or migrating a legacy repo off vendored `src/core/`.
 
 ## Prerequisites
 
