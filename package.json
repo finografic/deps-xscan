@@ -70,13 +70,13 @@
     "release:github:patch": "pnpm run release:check && pnpm version patch && git push --follow-tags",
     "release:github:minor": "pnpm run release:check && pnpm version minor && git push --follow-tags",
     "release:github:major": "pnpm run release:check && pnpm version major && git push --follow-tags",
-    "release:check": "pnpm lint:fix && pnpm typecheck && pnpm test:run",
+    "release:check": "pnpm format:check && pnpm lint:fix && pnpm typecheck && pnpm test:run",
     "release:publish": "pnpm publish --registry https://npm.pkg.github.com",
     "·········· REGISTRIES": "················································",
     "view:registry:github": "pnpm view @finografic/dep-scan --registry=https://npm.pkg.github.com",
     "·········· PACKAGES": "··················································",
-    "update:oxc-config": "pnpm update @finografic/oxc-config --latest && pnpm update oxfmt --latest && pnpm update oxlint --latest",
     "update:deps:all": "pnpm update --latest",
+    "update:oxc-config": "pnpm update @finografic/oxc-config --latest && pnpm update oxfmt --latest && pnpm update oxlint --latest",
     "·········· UTILS": "·····················································",
     "tsc:debug": "tsc --pretty --project tsconfig.json",
     "typecheck": "tsc --project tsconfig.json --noEmit",
@@ -91,23 +91,23 @@
     "semver": "^7.7.4"
   },
   "devDependencies": {
-    "@commitlint/cli": "^20.2.0",
-    "@commitlint/config-conventional": "^20.2.0",
-    "@finografic/md-lint": "^0.8.2",
-    "@finografic/oxc-config": "^2.0.0",
+    "@commitlint/cli": "^21.0.2",
+    "@commitlint/config-conventional": "^21.0.2",
+    "@finografic/md-lint": "^0.16.4",
+    "@finografic/oxc-config": "^2.6.6",
+    "@finografic/project-scripts": "^1.3.3",
     "@types/js-yaml": "^4.0.9",
-    "@types/node": "^24.0.0",
+    "@types/node": "24.12.0",
     "@types/semver": "^7.5.8",
-    "globals": "^17.3.0",
     "husky": "^9.1.7",
-    "lint-staged": "^16.2.7",
-    "oxfmt": "^0.43.0",
-    "oxlint": "^1.60.0",
-    "oxlint-tsgolint": "^0.21.1",
-    "tsdown": "^0.20.3",
+    "lint-staged": "^17.0.7",
+    "oxfmt": "^0.53.0",
+    "oxlint": "^1.68.0",
+    "oxlint-tsgolint": "^0.23.0",
+    "tsdown": "^0.22.1",
     "tsx": "^4.16.0",
     "typescript": "^5.9.3",
-    "vitest": "^4.0.18"
+    "vitest": "^4.1.8"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx,mjs,cjs}": [
@@ -123,7 +123,7 @@
     ]
   },
   "engines": {
-    "node": ">=22.0.0"
+    "node": ">=24.16.0"
   },
   "packageManager": "pnpm@10.32.1"
 }
