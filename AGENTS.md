@@ -96,7 +96,7 @@ Shared across Claude Code, Cursor, and GitHub Copilot.
 - Scanner pipeline lives in `src/lib/` (five stages plus cache) and `src/commands/scan/`; CLI entry is `src/cli.ts` built to `dist/index.mjs` (`xscan`).
 - Global binary is `xscan` (also `deps-xscan`); root `xscan` with no subcommand defaults to `scan`. `pnpm scan` is a dev shortcut in this repo only.
 - CLI infrastructure uses `@finografic/cli-kit` subpaths (`flow`, `render-help`, `commands`) — not local `src/core/`; `@finografic/core` is unused (`CLI_CORE.md` removed).
-- `demo/` is the in-repo standalone browser demo (Vite UI + unauthenticated `demo/api/` on :4001, `pnpm demo:dev`); spawns parent `dist/index.mjs`, not a vendored copy. `.agents/external/` holds gitignored copyable helpers for other hosted demos.
+- `demo/` is the in-repo standalone browser demo (Vite UI + unauthenticated `demo/api/` on :4001, `pnpm demo:dev`); spawns parent `dist/index.mjs`. Hosted two-host: GitHub Pages static UI (`.github/workflows/deploy-demo-pages.yml`, repo var `DEMO_API_BASE_URL` → `VITE_API_BASE_URL`) + Render scan API (`pnpm --dir demo start:api`, `PORT`, `NPM_TOKEN` only — not `VITE_*`). Pages first deploy needs one-time Settings → Pages → GitHub Actions (`configure-pages` `enablement: true` cannot create site via `GITHUB_TOKEN`).
 - Demo GitHub suggestion repos must have a committed root `package-lock.json` or `pnpm-lock.yaml` for lockfile materialization.
 - Dev-only stage runners live in `scripts/dev-*.ts` as thin wrappers around `src/lib/*`.
 - All four vulnerability sources are on by default; use `--skip-osv`, `--skip-node-posts`, `--skip-github`, or `--skip-dependabot` to exclude one.

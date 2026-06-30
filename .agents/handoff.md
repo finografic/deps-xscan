@@ -66,10 +66,47 @@ xscan [options]          # bare flags imply scan
 
 Loaded from the **scanned project's** `.env` / `.env.local`. Auto-detect: `NPM_TOKEN` → `GH_TOKEN` → `GITHUB_TOKEN`. File fallback: `GITHUB_TOKEN_FILE`. See README for details.
 
+## Browser demo (`demo/`)
+
+Standalone package `@finografic/deps-xscan-demo` — no monorepo `@workspace/*` deps, no auth.
+
+| Piece       | Path / command                                                     |
+| ----------- | ------------------------------------------------------------------ |
+| Vite UI     | `demo/src/` — `ScanPane`, xterm terminal                           |
+| Scan API    | `demo/api/` — `/api/health`, `/api/github-repo`, `/api/scan` (SSE) |
+| Shared data | `demo/shared/` — suggestion repos, source toggles                  |
+| Dev         | `pnpm demo:dev` — API :4001 + Vite :5173 (`/api` proxied)          |
+| Build       | `pnpm --dir demo build` → `demo/dist/`                             |
+
+The API spawns parent **`dist/index.mjs`** (root `pnpm build` required). Suggestion repos in `demo/shared/repos.ts` must have a committed root lockfile (`package-lock.json` or `pnpm-lock.yaml`).
+
+## Deployment
+
+Split static UI and scan API (Pages cannot run `node-pty`).
+
+| Artifact     | Host                | Notes                                     |
+| ------------ | ------------------- | ----------------------------------------- |
+| `demo/dist/` | GitHub Pages        | `.github/workflows/deploy-demo-pages.yml` |
+| `demo/api/`  | Render (or similar) | `node-pty` + `NPM_TOKEN`                  |
+
+**GitHub Pages workflow** — triggers on `demo/**` or workflow changes on `master`; also `workflow_dispatch`. Build env: `VITE_BASE_PATH=/<repo>/`, `VITE_API_BASE_URL` from repo variable `DEMO_API_BASE_URL`. Does **not** use `enablement: true` on `configure-pages` — `GITHUB_TOKEN` cannot create a Pages site; one-time **Settings → Pages → Source: GitHub Actions** required before first deploy.
+
+**Render API** (example: `deps-xscan-api.onrender.com`):
+
+- Build: `pnpm install --frozen-lockfile && pnpm build`
+- Start: `pnpm --dir demo start:api`
+- Env: `NPM_TOKEN` only (no `VITE_*` on API host)
+- Health check: `/api/health`
+- Server reads `PORT` (Render) or `DEMO_API_PORT` (local default `4001`); binds `0.0.0.0` when `PORT` is set
+
+Repo variable `DEMO_API_BASE_URL` = scan API origin, no trailing slash (set on `finografic/deps-xscan`).
+
+Published site URL pattern: `https://finografic.github.io/deps-xscan/`
+
 ## Status
 
 Pipeline runnable via `pnpm scan` (dev) or `xscan` after build/link. All four vulnerability sources on by default; use `--skip-*` to exclude. Dependabot needs a token and remote repo (or git origin).
 
-Completed: `docs/todo/DONE_GITHUB_SECURITY_SOURCE.md` (2026-06-27).
+Completed: `docs/todo/DONE_GITHUB_SECURITY_SOURCE.md` (2026-06-27). Standalone `demo/` package + Pages deploy workflow (2026-06-27).
 
-Pending validation: manual scan of `cv-justin-rankin-v1` — see `docs/todo/NEXT_STEPS.md`.
+Pending validation: manual scan of `cv-justin-rankin-v1` — see `docs/todo/NEXT_STEPS.md`. First Pages deploy after one-time Pages source enable + successful workflow run.

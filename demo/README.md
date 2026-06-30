@@ -60,9 +60,9 @@ This starts:
 
 ### GitHub Pages
 
-1. Push to `master` (or run **Deploy Demo Pages** manually). The workflow enables Pages automatically (`configure-pages` with `enablement: true`).
+1. **One-time:** Repo **Settings → Pages → Build and deployment → Source: GitHub Actions** (the workflow token cannot create the site automatically).
 2. Repo **Settings → Secrets and variables → Actions → Variables**: set `DEMO_API_BASE_URL` to your scan API origin (no trailing slash), e.g. `https://deps-xscan-api.onrender.com`.
-3. Site URL after deploy: `https://<org>.github.io/<repo>/`.
+3. Push to `master` (or run **Deploy Demo Pages** manually). Site URL after deploy: `https://<org>.github.io/<repo>/`.
 
 The workflow sets `VITE_BASE_PATH=/<repo>/` and bakes `VITE_API_BASE_URL` into the static build.
 
