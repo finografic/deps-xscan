@@ -125,7 +125,7 @@ export async function queryGithubAdvisoryBatch(
   packages: Array<{ name: string; version: string }>,
   cacheOpts: Partial<CacheOptions> = {},
   token?: string,
-  options: { verbose?: boolean } = {},
+  options: { verbose?: boolean; onProgress?: (completed: number, total: number) => void } = {},
 ): Promise<GithubAdvisoryQueryResult[]> {
   const unique = dedupePackages(packages);
   const results: GithubAdvisoryQueryResult[] = [];
@@ -134,8 +134,12 @@ export async function queryGithubAdvisoryBatch(
     console.log(`[github-advisory] Querying ${unique.length} package versions`);
   }
 
-  for (const { name, version } of unique) {
+  options.onProgress?.(0, unique.length);
+
+  for (let i = 0; i < unique.length; i++) {
+    const { name, version } = unique[i];
     results.push(await queryGithubAdvisorySingle(name, version, cacheOpts, token, options));
+    options.onProgress?.(i + 1, unique.length);
   }
 
   return results;

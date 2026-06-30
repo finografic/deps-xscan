@@ -12,9 +12,17 @@ export const scanHelp: CommandHelpConfig = {
     { flag: '--node-posts <n>', description: 'Number of Node.js security posts to scan (default: 5)' },
     { flag: '--json-out <path>', description: 'Path for JSON report output' },
     { flag: '-v, --verbose', description: 'Show detailed progress' },
-    { flag: '--no-github', description: 'Disable GitHub Advisory Database checks (enabled by default)' },
-    { flag: '--dependabot', description: 'Fetch Dependabot alerts for the repository (requires token)' },
-    { flag: '--github-repo <owner/repo>', description: 'GitHub repository for Dependabot alerts' },
+    { flag: '--skip-osv', description: 'Skip OSV.dev vulnerability queries (enabled by default)' },
+    {
+      flag: '--skip-node-posts',
+      description: 'Skip Node.js runtime security post scraping (enabled by default)',
+    },
+    { flag: '--skip-github', description: 'Skip GitHub Advisory Database queries (enabled by default)' },
+    { flag: '--skip-dependabot', description: 'Skip Dependabot alert fetching (enabled by default)' },
+    {
+      flag: '--remote-repo <owner/repo>',
+      description: 'Remote repository for Dependabot alerts (auto-detected from git origin)',
+    },
     {
       flag: '--github-alert-states <states>',
       description: 'Dependabot alert states, comma-separated (default: open)',
@@ -23,11 +31,19 @@ export const scanHelp: CommandHelpConfig = {
     { flag: '-h, --help', description: 'Show this help' },
   ],
   examples: [
-    { command: 'xscan scan', description: 'Scan the current project with default settings' },
+    { command: 'xscan scan', description: 'Scan the current project with all sources enabled' },
     { command: 'xscan scan --project ./my-app --format terminal', description: 'Terminal-only report' },
     {
-      command: 'xscan scan --dependabot --project ./my-app',
-      description: 'Include Dependabot alerts (reads NPM_TOKEN or GITHUB_TOKEN from .env)',
+      command: 'xscan scan --skip-github --project ./my-app',
+      description: 'Skip slow GitHub Advisory Database queries',
+    },
+    {
+      command: 'xscan scan --skip-dependabot --project ./my-app',
+      description: 'Skip Dependabot alerts when no token is available',
+    },
+    {
+      command: 'xscan scan --project /tmp/checkout --remote-repo owner/repo',
+      description: 'Scan a materialized checkout and pin the remote repo for Dependabot',
     },
     {
       command: 'xscan scan --no-cache --node-posts 10 --verbose',
@@ -38,7 +54,7 @@ export const scanHelp: CommandHelpConfig = {
     'Parse the lockfile and resolve the full dependency tree',
     'Scrape recent Node.js security blog posts for runtime CVEs',
     'Query OSV.dev and GitHub Advisory Database for each resolved package version',
-    'Optionally fetch Dependabot alerts when --dependabot is set',
+    'Fetch Dependabot alerts when a GitHub repo and token are available',
     'Correlate and deduplicate findings, then emit a report',
   ],
 };

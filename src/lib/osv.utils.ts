@@ -71,12 +71,22 @@ export async function queryOsvSingle(
 export async function queryOsvBatch(
   packages: Array<{ name: string; version: string }>,
   cacheOpts: Partial<CacheOptions> = {},
-  options: { verbose?: boolean } = {},
+  options: { verbose?: boolean; onProgress?: (completed: number, total: number) => void } = {},
 ): Promise<OsvQueryResult[]> {
   const fetch = (await import('node-fetch')).default;
+  const total = packages.length;
 
   const results: OsvQueryResult[] = [];
   const uncached: Array<{ name: string; version: string; index: number }> = [];
+
+  let completed = 0;
+
+  const tick = (): void => {
+    completed += 1;
+    options.onProgress?.(completed, total);
+  };
+
+  options.onProgress?.(0, total);
 
   for (let i = 0; i < packages.length; i++) {
     const { name, version } = packages[i];
@@ -84,6 +94,7 @@ export async function queryOsvBatch(
     const cached = getCached<OsvQueryResult>(cacheKey, cacheOpts);
     if (cached) {
       results[i] = cached;
+      tick();
     } else {
       uncached.push({ name, version, index: i });
     }
@@ -122,6 +133,7 @@ export async function queryOsvBatch(
         }
         for (const item of chunk) {
           results[item.index] = await queryOsvSingle(item.name, item.version, cacheOpts, options);
+          tick();
         }
         continue;
       }
@@ -145,6 +157,7 @@ export async function queryOsvBatch(
 
         const cacheKey = `${CACHE_KEY_PREFIX}-${name}@${version}`;
         setCache(cacheKey, result, cacheOpts);
+        tick();
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
@@ -157,6 +170,7 @@ export async function queryOsvBatch(
           packageVersion: item.version,
           vulnerabilities: [],
         };
+        tick();
       }
     }
   }

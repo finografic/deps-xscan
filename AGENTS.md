@@ -89,20 +89,21 @@ Shared across Claude Code, Cursor, and GitHub Copilot.
 - When oxlint flags intentional return-type-only generics, extend or suppress them rather than removing the type parameter.
 - Store GitHub PATs as `NPM_TOKEN` in project `.env` files (not `GITHUB_TOKEN` — GitHub reserves that name).
 - Summary badges with nested picocolors bg+fg need explicit ANSI via `summaryBadge()` — nesting resets fg before bg closes; `dim` does not dim backgrounds.
+- Vulnerability sources use `--skip-{source}` flags only (not `--no-*`); all sources on by default. Avoid redundant CLI aliases; `--no-cache` is the sole cache opt-out.
 
 ## Learned Workspace Facts
 
 - Scanner pipeline lives in `src/lib/` (five stages plus cache) and `src/commands/scan/`; CLI entry is `src/cli.ts` built to `dist/index.mjs` (`xscan`).
-- Global binary is `xscan` (also `deps-xscan`); `pnpm scan` is a dev shortcut in this repo only.
+- Global binary is `xscan` (also `deps-xscan`); root `xscan` with no subcommand defaults to `scan`. `pnpm scan` is a dev shortcut in this repo only.
 - CLI infrastructure uses `@finografic/cli-kit` subpaths (`flow`, `render-help`, `commands`) — not local `src/core/`.
-- `@finografic/core` is not used in this project; do not add it unless a specific utility need arises.
-- `docs/spec/CLI_CORE.md` was removed as obsolete; the canonical CLI spec is `CLI_KIT.md` in the cli-kit repo.
+- `@finografic/core` is unused; `CLI_CORE.md` was removed — align with `@finografic/cli-kit` and `CLI_KIT.md` in the cli-kit repo.
+- `.agents/external/` holds gitignored copyable hosted-demo helpers (e.g. GitHub URL → temp-dir scan); keep that orchestration outside the published package.
 - Dev-only stage runners live in `scripts/dev-*.ts` as thin wrappers around `src/lib/*`.
-- GitHub Advisory Database is on by default; Dependabot alerts require `--dependabot`.
+- All four vulnerability sources are on by default; use `--skip-osv`, `--skip-node-posts`, `--skip-github`, or `--skip-dependabot` to exclude one.
+- Dependabot remote repository: `--remote-repo owner/repo` (auto-detected from git origin when omitted).
 - GitHub token: load `.env`/`.env.local` from scanned project root; auto-detect `NPM_TOKEN` → `GH_TOKEN` → `GITHUB_TOKEN`; override via `--github-token-env` (comma-separated) or `GITHUB_TOKEN_FILE`.
-- API cache: hashed JSON under `~/.config/finografic/deps-xscan/cache/` via `@finografic/cli-kit/xdg` `createXdgPaths()`; legacy `~/.deps-xscan-cache` migrates on first write.
-- Scan report (`deps-xscan-report.json` in scanned project, or `--json-out`) is distinct from API cache.
+- API cache: hashed JSON under `~/.config/finografic/deps-xscan/cache/` via `@finografic/cli-kit/xdg` `createXdgPaths()`; legacy `~/.deps-xscan-cache` migrates on first write. Finografic packages store config under `~/.config/finografic/` using subfolders when needed.
+- Scan report (`deps-xscan-report.json` in scanned project, or `--json-out`) is distinct from API cache; exits non-zero when actionable findings exist (for CI/scripting).
 - Lockfile anchors package/version resolution; findings merge OSV, GitHub Advisory, Node blog, and optional Dependabot. Supports pnpm/npm lockfiles only (not yarn yet).
-- Finografic config convention: store package config under `~/.config/finografic/`; use subfolders for multi-file caches.
 
 ---

@@ -2,17 +2,13 @@ import { writeFileSync } from 'node:fs';
 import pc from 'picocolors';
 
 import type { CorrelationResult, Finding } from 'lib/correlate.utils';
-import type { ReportFoundLine } from 'lib/report-summary.utils';
-import { buildActionSummary } from 'lib/report-summary.utils';
+import type { ReportActionGroup, ReportFoundLine } from 'lib/report-summary.utils';
+import { buildActionSummary, combinedUpdateCommand } from 'lib/report-summary.utils';
+import { printTitleBanner } from 'lib/tui.utils';
 
 import type { SecuritySourceId } from 'constants/security-sources.constants';
 import { SECURITY_SOURCE_LABELS } from 'constants/security-sources.constants';
-import {
-  HR_SEPARATOR,
-  TITLE_BORDER_CLOSE,
-  TITLE_BORDER_OPEN,
-  TITLE_BORDER_SIDE,
-} from 'constants/tui.constants';
+import { HR_SEPARATOR } from 'constants/tui.constants';
 
 export type OutputFormat = 'terminal' | 'json' | 'both';
 
@@ -47,14 +43,7 @@ function printTerminalReport(
   const { summary, nodeVersionFindings, dependencyFindings } = result;
 
   console.log();
-  console.log(pc.bold(pc.white(TITLE_BORDER_OPEN)));
-  console.log(
-    pc.bold(pc.white(TITLE_BORDER_SIDE)) +
-      pc.bold(pc.cyan('  deps-xscan — Security Report')) +
-      pc.bold(pc.white(`                        ${TITLE_BORDER_SIDE}`)),
-  );
-  console.log(pc.bold(pc.white(TITLE_BORDER_CLOSE)));
-  console.log();
+  printTitleBanner('deps-xscan — Security Report');
 
   console.log(pc.dim(`  Scanned at:     ${result.scannedAt}`));
   console.log(pc.dim(`  Node version:   ${result.projectNodeVersion || 'not detected'}`));
@@ -81,7 +70,7 @@ function printTerminalReport(
 
   if (dependencyFindings.length > 0) {
     console.log();
-    console.log(pc.bold(pc.red('  🔍 Dependency Vulnerabilities')));
+    console.log(pc.bold(pc.red('  🔍  Dependency Vulnerabilities')));
 
     const grouped = groupBySeverity(dependencyFindings);
 
@@ -180,22 +169,53 @@ function printActionSummary(actionSummary: NonNullable<ReturnType<typeof buildAc
   console.log(pc.dim(HR_SEPARATOR));
   console.log();
   console.log(pc.bold(pc.green('SUMMARY & ACTIONS:')));
+  if (actionSummary.exposureNote) {
+    console.log(pc.dim(`  ${actionSummary.exposureNote}`));
+  }
   console.log();
   printFoundLines(actionSummary.foundLines);
   console.log();
   console.log(pc.bold(pc.dim(pc.cyan('WHAT TO DO:'))));
   console.log();
 
-  for (const step of actionSummary.actionSteps) {
-    for (const [index, line] of step.split('\n').entries()) {
-      console.log(index === 0 ? line : pc.cyan(line.trim()));
-    }
+  for (const [index, group] of actionSummary.actionGroups.entries()) {
+    printActionGroup(index + 1, group);
     console.log();
   }
 
   console.log(pc.bold(pc.dim(pc.cyan('RECOMMENDATION:'))));
   console.log();
   console.log(actionSummary.recommendation);
+}
+
+function printActionGroup(stepNumber: number, group: ReportActionGroup): void {
+  const badge =
+    group.badgeSeverity !== null
+      ? `${severityColor(group.badgeSeverity)(`[${group.badgeSeverity.toLowerCase()}]`)} `
+      : '';
+
+  const subtitle = group.subtitle ? ` ${pc.dim(`— ${group.subtitle}`)}` : '';
+  console.log(`${stepNumber}. ${badge}${pc.white(group.title)}${subtitle}`);
+
+  if (group.notes) {
+    for (const note of group.notes) {
+      console.log(pc.dim(`   ${note}`));
+    }
+  }
+
+  if (group.commands.length === 0) return;
+
+  if (group.commands.length === 1) {
+    console.log(pc.cyan(`   ${group.commands[0]}`));
+    return;
+  }
+
+  console.log();
+  for (const command of group.commands) {
+    console.log(pc.dim(`   ${command}`));
+  }
+  console.log();
+  console.log(pc.cyan(`   ${combinedUpdateCommand(group.commands)}`));
 }
 
 function printFoundLines(lines: ReportFoundLine[]): void {

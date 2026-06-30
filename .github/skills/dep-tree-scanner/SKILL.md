@@ -57,6 +57,8 @@ deps-xscan --project ./path/to/app              # specific project
 deps-xscan --format json --json-out report.json # JSON only
 deps-xscan --no-cache --verbose                 # fresh fetch, full logging
 deps-xscan --node-posts 10                      # check last 10 Node.js security posts
+deps-xscan --skip-github                        # skip GitHub Advisory Database
+deps-xscan --remote-repo owner/repo             # pin remote repo for Dependabot
 ```
 
 ## CLI flags
@@ -69,6 +71,13 @@ deps-xscan --node-posts 10                      # check last 10 Node.js security
 --node-posts <n>      Number of Node.js security posts to scan (default: 5)
 --json-out <path>     File path for JSON report output
 --verbose, -v         Show per-stage progress
+--skip-osv            Skip OSV.dev (enabled by default)
+--skip-node-posts     Skip Node.js security posts (enabled by default)
+--skip-github         Skip GitHub Advisory Database (enabled by default)
+--skip-dependabot     Skip Dependabot alerts (enabled by default)
+--remote-repo <owner/repo>  Remote repository for Dependabot (auto-detected from git origin)
+--github-alert-states <states>  Dependabot alert states (default: open)
+--github-token-env <names>      Token env var names, comma-separated
 ```
 
 Cached API responses: hashed JSON under `~/.config/finografic/deps-xscan/cache/` (`XDG_CONFIG_HOME` respected). Default TTL 24h.

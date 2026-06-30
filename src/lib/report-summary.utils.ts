@@ -10,10 +10,23 @@ export interface ReportFoundLine {
   scope: FindingScope;
 }
 
+export interface ReportActionGroup {
+  /** Highest severity in the group — drives the colored badge after the step number. */
+  badgeSeverity: FindingSeverity | null;
+  title: string;
+  subtitle?: string;
+  /** Full command lines, e.g. `pnpm update foo@1.2.3`. */
+  commands: string[];
+  /** Plain follow-up lines (Node upgrade hints, etc.) when there are no pnpm commands. */
+  notes?: string[];
+}
+
 export interface ReportActionSummary {
   foundLines: ReportFoundLine[];
-  actionSteps: string[];
+  actionGroups: ReportActionGroup[];
   recommendation: string;
+  /** Shown under SUMMARY & ACTIONS when findings are dev/toolchain-only. */
+  exposureNote?: string;
 }
 
 const SEVERITY_RANK: Record<string, number> = {
@@ -34,8 +47,9 @@ export function buildActionSummary(result: CorrelationResult): ReportActionSumma
 
   return {
     foundLines: buildFoundLines(result),
-    actionSteps: buildActionSteps(result),
+    actionGroups: buildActionGroups(result),
     recommendation: buildRecommendation(result),
+    exposureNote: buildExposureNote(result),
   };
 }
 
@@ -90,45 +104,99 @@ function resolveFindingScope(finding: Finding): FindingScope {
   return finding.dependencyKind === 'prod' ? 'runtime' : 'development';
 }
 
-function buildActionSteps(result: CorrelationResult): string[] {
-  const steps: string[] = [];
-  let step = 1;
+function hasRuntimeExposure(result: CorrelationResult): boolean {
+  if (result.nodeVersionFindings.length > 0) return true;
+  return result.dependencyFindings.some((f) => resolveFindingScope(f) === 'runtime');
+}
+
+function isDevToolchainOnly(result: CorrelationResult): boolean {
+  if (result.dependencyFindings.length === 0) return false;
+  return result.dependencyFindings.every((f) => resolveFindingScope(f) === 'development');
+}
+
+function buildExposureNote(result: CorrelationResult): string | undefined {
+  if (!isDevToolchainOnly(result) || hasRuntimeExposure(result)) {
+    return undefined;
+  }
+  return 'No production runtime exposure — development / transitive toolchain only.';
+}
+
+function buildActionGroups(result: CorrelationResult): ReportActionGroup[] {
+  const groups: ReportActionGroup[] = [];
 
   const directProd = uniqueByPackage(
     result.dependencyFindings.filter((f) => f.dependencyKind === 'prod'),
   ).toSorted(bySeverityDesc);
 
-  for (const finding of directProd) {
-    const cmd = updateCommand(finding);
-    steps.push(`${step}. Update ${finding.packageName} first — ${prodPriorityReason(finding)}.\n   ${cmd}`);
-    step++;
+  if (directProd.length > 0) {
+    groups.push({
+      badgeSeverity: directProd[0].severity,
+      title: 'Update first',
+      subtitle: 'direct production dependencies, affecting runtime consumers',
+      commands: directProd.map((finding) => updateCommand(finding)),
+    });
   }
 
   const parentRoots = collectParentUpdateTargets(result.dependencyFindings);
   if (parentRoots.length > 0) {
-    const label = parentRoots.join(' ');
-    steps.push(
-      `${step}. Update the dev toolchain that pulls in transitive findings — High items usually arrive through commitlint, Vitest/Vite, or tsx.\n   pnpm update ${label}`,
+    const parentSeverity = maxSeverity(
+      result.dependencyFindings.filter((f) => {
+        const root = f.dependencyPaths[0]?.[0];
+        return root !== undefined && root !== f.packageName && parentRoots.includes(root);
+      }),
     );
-    step++;
+    groups.push({
+      badgeSeverity: parentSeverity,
+      title: 'Update dev toolchain',
+      subtitle: 'pulls in transitive findings — often commitlint, Vitest/Vite, or tsx',
+      commands: [`pnpm update ${parentRoots.join(' ')}`],
+    });
+  }
+
+  const transitiveFixes = collectTransitivePackageUpdates(result.dependencyFindings, parentRoots);
+  for (const severity of ['Critical', 'High', 'Medium', 'Low'] as FindingSeverity[]) {
+    const bucket = transitiveFixes.filter((f) => f.severity === severity);
+    if (bucket.length === 0) continue;
+
+    groups.push({
+      badgeSeverity: severity,
+      title: `(${severity.toLowerCase()} transitive, development)`,
+      subtitle: 'does not affect production runtime consumers',
+      commands: bucket.map((finding) => updateCommand(finding)),
+    });
   }
 
   if (result.nodeVersionFindings.length > 0) {
     const patched = [...new Set(result.nodeVersionFindings.map((f) => f.patchedIn))].toSorted();
-    steps.push(
-      `${step}. Upgrade Node.js to a patched release (${patched.join(' or ')}).\n   Use your version manager (.nvmrc / pnpm devEngines) and reinstall dependencies.`,
-    );
-    step++;
+    groups.push({
+      badgeSeverity: maxSeverity(result.nodeVersionFindings),
+      title: 'Upgrade Node.js',
+      subtitle: `to a patched release (${patched.join(' or ')})`,
+      commands: [],
+      notes: ['Use your version manager (.nvmrc / pnpm devEngines) and reinstall dependencies.'],
+    });
   }
 
-  steps.push(`${step}. Rerun the scan to confirm the tree is clean.\n   xscan --no-cache`);
-  step++;
+  groups.push({
+    badgeSeverity: null,
+    title: 'Rerun the scan to confirm the tree is clean',
+    commands: ['xscan --no-cache'],
+  });
 
-  steps.push(
-    `${step}. If anything remains, check the Via: line in each finding — the package immediately before the vulnerable package is usually the parent that needs to move.`,
-  );
+  groups.push({
+    badgeSeverity: null,
+    title: 'If anything remains, check the Via: line in each finding',
+    subtitle:
+      'the package immediately before the vulnerable package is usually the parent that needs to move',
+    commands: [],
+  });
 
-  return steps;
+  return groups;
+}
+
+export function combinedUpdateCommand(commands: string[]): string {
+  const packages = commands.map((command) => command.replace(/^pnpm update /, ''));
+  return `pnpm update ${packages.join(' ')}`;
 }
 
 function buildRecommendation(result: CorrelationResult): string {
@@ -137,6 +205,11 @@ function buildRecommendation(result: CorrelationResult): string {
     (f) => f.severity === 'High' && f.dependencyKind !== 'prod',
   );
   const nodeIssues = result.nodeVersionFindings.length > 0;
+  const devOnly = isDevToolchainOnly(result);
+
+  if (devOnly && !directProd && !nodeIssues) {
+    return 'No production runtime exposure from these findings. They are limited to development or transitive toolchain dependencies. Apply the updates above when you next refresh dev dependencies—recommended before release, not a production deploy blocker.';
+  }
 
   if (directProd && highTransitive) {
     return 'Update direct runtime dependencies first, then refresh dev tooling that pulls in vulnerable transitive packages. Most findings are dev-toolchain exposure rather than runtime exposure, but High transitive findings should still be resolved before release.';
@@ -147,7 +220,7 @@ function buildRecommendation(result: CorrelationResult): string {
   }
 
   if (highTransitive) {
-    return 'These findings are mostly in development tooling. Update the parent dependencies listed above, then rerun xscan to verify the lockfile picked up patched transitive versions.';
+    return 'These findings are in development tooling or transitive dependencies. Follow the update steps above, then rerun xscan to verify the lockfile picked up patched versions.';
   }
 
   if (nodeIssues) {
@@ -157,26 +230,17 @@ function buildRecommendation(result: CorrelationResult): string {
   return 'Review the findings above, apply the suggested updates, and rerun xscan --no-cache to confirm the dependency tree is clean.';
 }
 
-function prodPriorityReason(finding: Finding): string {
-  if (finding.sources.includes('github-dependabot')) {
-    const scopeNote =
-      finding.scope === 'runtime'
-        ? 'GitHub Dependabot confirms this as a runtime dependency'
-        : finding.scope === 'development'
-          ? 'GitHub Dependabot confirms this as a development dependency'
-          : 'GitHub Dependabot confirmed this alert for your repository';
-    if (finding.githubAlertUrl) {
-      return `${scopeNote} (${finding.githubAlertUrl})`;
+function maxSeverity(findings: Array<{ severity: FindingSeverity }>): FindingSeverity | null {
+  let best: FindingSeverity | null = null;
+  let bestRank = -1;
+  for (const finding of findings) {
+    const rank = SEVERITY_RANK[finding.severity] ?? 0;
+    if (rank > bestRank) {
+      bestRank = rank;
+      best = finding.severity;
     }
-    return scopeNote;
   }
-  if (finding.dependencyKind === 'prod') {
-    return 'this is a direct production dependency and affects runtime consumers';
-  }
-  if (finding.dependencyKind === 'dev') {
-    return 'this is a direct dev dependency used in local tooling';
-  }
-  return 'this dependency is declared directly in your manifest';
+  return best;
 }
 
 function updateCommand(finding: Finding): string {
@@ -200,6 +264,22 @@ function collectParentUpdateTargets(findings: Finding[]): string[] {
   }
 
   return [...roots].toSorted();
+}
+
+/** Direct package bumps when no parent root is available (e.g. path is only the vulnerable package). */
+function collectTransitivePackageUpdates(findings: Finding[], parentRoots: string[]): Finding[] {
+  const parentSet = new Set(parentRoots);
+  const candidates = findings.filter(
+    (f) => f.dependencyKind !== 'prod' && (SEVERITY_RANK[f.severity] ?? 0) >= SEVERITY_RANK.High,
+  );
+
+  return uniqueByPackage(
+    candidates.filter((f) => {
+      const root = f.dependencyPaths[0]?.[0];
+      if (root && root !== f.packageName && parentSet.has(root)) return false;
+      return true;
+    }),
+  ).toSorted(bySeverityDesc);
 }
 
 function uniqueByPackage(findings: Finding[]): Finding[] {

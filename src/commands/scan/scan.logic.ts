@@ -20,6 +20,7 @@ import { queryOsvBatch } from 'lib/osv.utils';
 import type { OsvQueryResult } from 'lib/osv.utils';
 import { generateReport } from 'lib/report.utils';
 import type { OutputFormat } from 'lib/report.utils';
+import { FETCHING_SOURCES_BANNER, printTitleBanner, skippedSourceLabel } from 'lib/tui.utils';
 
 export interface ScanOptions {
   project: string;
@@ -29,9 +30,11 @@ export interface ScanOptions {
   nodePosts: number;
   jsonOut?: string;
   verbose: boolean;
+  osvEnabled: boolean;
+  nodePostsEnabled: boolean;
   githubEnabled: boolean;
   dependabot: boolean;
-  githubRepo?: string;
+  remoteRepo?: string;
   githubAlertStates: string[];
   githubTokenEnv?: string;
 }
@@ -44,7 +47,12 @@ function log(msg: string, verbose: boolean): void {
 }
 
 function shouldUseSpinners(verbose: boolean): boolean {
-  return (process.stdout.isTTY ?? false) && !verbose;
+  const forceProgress = process.env.DEMO_XSCAN_FORCE_PROGRESS === '1';
+  return ((process.stdout.isTTY ?? false) || forceProgress) && !verbose;
+}
+
+function usesTerminalOutput(format: OutputFormat): boolean {
+  return format === 'terminal' || format === 'both';
 }
 
 function sourceErrorMessage(error: unknown): string {
@@ -90,102 +98,73 @@ export async function runScanPipeline(options: ScanOptions): Promise<number> {
   }
 
   const useSpinners = shouldUseSpinners(options.verbose);
-
-  log(`Stage 2: Scraping last ${options.nodePosts} Node.js security posts...`, options.verbose);
-  let posts: ScrapedPost[] = [];
-  try {
-    if (useSpinners) {
-      await tasks([
-        {
-          title: `Node.js security posts (${options.nodePosts} posts)`,
-          task: async () => {
-            posts = await scrapeNodeSecurityPosts(options.nodePosts, cacheOpts);
-            const totalCves = posts.reduce((sum, p) => sum + p.vulnerabilities.length, 0);
-            return `Node.js security posts: ${posts.length} posts, ${totalCves} CVEs`;
-          },
-        },
-      ]);
-    } else {
-      posts = await scrapeNodeSecurityPosts(options.nodePosts, cacheOpts, { verbose: options.verbose });
-    }
-    const totalCves = posts.reduce((sum, p) => sum + p.vulnerabilities.length, 0);
-    log(`  Extracted ${totalCves} CVEs from ${posts.length} posts`, options.verbose);
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.warn(`Warning: Could not fetch Node.js security posts: ${message}`);
-    console.warn('Continuing with OSV.dev data only...');
-    posts = [];
-  }
-
-  log(`Stage 3: Querying OSV.dev and GitHub for ${lockResult.deps.length} packages...`, options.verbose);
   const packages = lockResult.deps.map((d) => ({
     name: d.name,
     version: d.version,
   }));
-
   const githubToken = resolveGithubToken(options.githubTokenEnv);
 
+  let posts: ScrapedPost[] = [];
   let osvResults: OsvQueryResult[] = packages.map((p) => ({
     packageName: p.name,
     packageVersion: p.version,
     vulnerabilities: [],
   }));
   let githubAdvisoryResults: GithubAdvisoryQueryResult[] = [];
+  let dependabotAlerts: GithubDependabotAlert[] = [];
   let osvError: unknown;
   let githubAdvisoryError: unknown;
 
-  if (useSpinners) {
-    await tasks([
-      {
-        title: `OSV.dev (${packages.length} package versions)`,
-        task: async () => {
-          try {
-            osvResults = await queryOsvBatch(packages, cacheOpts);
-            return `OSV.dev: ${countOsvVulnerabilities(osvResults)} vulnerabilities`;
-          } catch (err: unknown) {
-            osvError = err;
-            return 'OSV.dev unavailable; continuing without OSV data';
-          }
+  if (useSpinners && usesTerminalOutput(options.format)) {
+    printTitleBanner(FETCHING_SOURCES_BANNER);
+    await tasks(
+      buildSourceTasks(options, cacheOpts, packages, githubToken, {
+        posts: (value) => {
+          posts = value;
         },
-      },
-      {
-        title: `GitHub Advisory Database (${packages.length} package versions)`,
-        enabled: options.githubEnabled,
-        task: async () => {
-          try {
-            githubAdvisoryResults = await queryGithubAdvisoryBatch(packages, cacheOpts, githubToken);
-            return `GitHub Advisory Database: ${countGithubVulnerabilities(githubAdvisoryResults)} vulnerabilities`;
-          } catch (err: unknown) {
-            githubAdvisoryError = err;
-            return 'GitHub Advisory Database unavailable; continuing without GitHub advisory data';
-          }
+        osvResults: (value) => {
+          osvResults = value;
         },
-      },
-    ]);
+        githubAdvisoryResults: (value) => {
+          githubAdvisoryResults = value;
+        },
+        dependabotAlerts: (value) => {
+          dependabotAlerts = value;
+        },
+        osvError: (value) => {
+          osvError = value;
+        },
+        githubAdvisoryError: (value) => {
+          githubAdvisoryError = value;
+        },
+      }),
+    );
   } else {
-    const [osvSettled, githubAdvisorySettled] = await Promise.allSettled([
-      queryOsvBatch(packages, cacheOpts, { verbose: options.verbose }),
-      options.githubEnabled
-        ? queryGithubAdvisoryBatch(packages, cacheOpts, githubToken, { verbose: options.verbose })
-        : Promise.resolve([]),
-    ]);
-
-    if (osvSettled.status === 'fulfilled') {
-      osvResults = osvSettled.value;
-    } else {
-      osvError = osvSettled.reason;
-    }
-
-    if (options.githubEnabled) {
-      if (githubAdvisorySettled.status === 'fulfilled') {
-        githubAdvisoryResults = githubAdvisorySettled.value;
-      } else {
-        githubAdvisoryError = githubAdvisorySettled.reason;
-      }
-    }
+    await runSourcesWithoutSpinners(options, cacheOpts, packages, githubToken, {
+      posts: (value) => {
+        posts = value;
+      },
+      osvResults: (value) => {
+        osvResults = value;
+      },
+      githubAdvisoryResults: (value) => {
+        githubAdvisoryResults = value;
+      },
+      dependabotAlerts: (value) => {
+        dependabotAlerts = value;
+      },
+      osvError: (value) => {
+        osvError = value;
+      },
+      githubAdvisoryError: (value) => {
+        githubAdvisoryError = value;
+      },
+    });
   }
 
-  if (osvError) {
+  if (!options.osvEnabled) {
+    log('  OSV.dev: skipped (--skip-osv)', options.verbose);
+  } else if (osvError) {
     console.warn(`Warning: OSV.dev query failed: ${sourceErrorMessage(osvError)}`);
     console.warn('Continuing without OSV.dev data...');
   } else {
@@ -193,7 +172,7 @@ export async function runScanPipeline(options: ScanOptions): Promise<number> {
   }
 
   if (!options.githubEnabled) {
-    log('  GitHub Advisory Database: skipped (--no-github)', options.verbose);
+    log('  GitHub Advisory Database: skipped (--skip-github)', options.verbose);
   } else if (githubAdvisoryError) {
     console.warn(
       `Warning: GitHub Advisory Database query failed: ${sourceErrorMessage(githubAdvisoryError)}`,
@@ -206,48 +185,10 @@ export async function runScanPipeline(options: ScanOptions): Promise<number> {
     );
   }
 
-  let dependabotAlerts: GithubDependabotAlert[] = [];
-  if (options.dependabot) {
-    log('Stage 4: Fetching Dependabot alerts...', options.verbose);
-    const repository = options.githubRepo || detectGithubRepo(options.project);
-    if (!repository) {
-      console.warn('Warning: Could not detect GitHub repository for Dependabot alerts.');
-      console.warn('  Use --github-repo owner/repo or run from a git clone with a GitHub origin remote.');
-    } else if (!githubToken) {
-      console.warn(
-        `Warning: ${githubTokenEnvLabel(options.githubTokenEnv)} not set — Dependabot alerts require a GitHub token.`,
-      );
-      console.warn(
-        '  Add a token to the project .env (e.g. NPM_TOKEN), export it in your shell, or set GITHUB_TOKEN_FILE.',
-      );
-    } else {
-      log(`  Repository: ${repository}`, options.verbose);
-      if (useSpinners) {
-        await tasks([
-          {
-            title: `Dependabot alerts (${repository})`,
-            task: async () => {
-              dependabotAlerts = await fetchDependabotAlerts(
-                repository,
-                cacheOpts,
-                githubToken,
-                options.githubAlertStates,
-              );
-              return `Dependabot alerts: ${dependabotAlerts.length} alerts`;
-            },
-          },
-        ]);
-      } else {
-        dependabotAlerts = await fetchDependabotAlerts(
-          repository,
-          cacheOpts,
-          githubToken,
-          options.githubAlertStates,
-          { verbose: options.verbose },
-        );
-      }
-      log(`  Dependabot: ${dependabotAlerts.length} open alerts`, options.verbose);
-    }
+  if (!options.dependabot) {
+    log('  Dependabot alerts: skipped (--skip-dependabot)', options.verbose);
+  } else {
+    log(`  Dependabot: ${dependabotAlerts.length} open alerts`, options.verbose);
   }
 
   log('Stage 5: Correlating findings...', options.verbose);
@@ -271,4 +212,200 @@ export async function runScanPipeline(options: ScanOptions): Promise<number> {
   }
 
   return 0;
+}
+
+interface SourceRunSink {
+  posts: (value: ScrapedPost[]) => void;
+  osvResults: (value: OsvQueryResult[]) => void;
+  githubAdvisoryResults: (value: GithubAdvisoryQueryResult[]) => void;
+  dependabotAlerts: (value: GithubDependabotAlert[]) => void;
+  osvError: (value: unknown) => void;
+  githubAdvisoryError: (value: unknown) => void;
+}
+
+function buildSourceTasks(
+  options: ScanOptions,
+  cacheOpts: Partial<CacheOptions>,
+  packages: Array<{ name: string; version: string }>,
+  githubToken: string | undefined,
+  sink: SourceRunSink,
+) {
+  const repository = options.remoteRepo || detectGithubRepo(options.project);
+
+  return [
+    {
+      title: `Node.js security posts (${options.nodePosts} posts)`,
+      task: async () => {
+        if (!options.nodePostsEnabled) {
+          return skippedSourceLabel('Node.js security posts');
+        }
+        try {
+          const posts = await scrapeNodeSecurityPosts(options.nodePosts, cacheOpts);
+          sink.posts(posts);
+          const totalCves = posts.reduce((sum, p) => sum + p.vulnerabilities.length, 0);
+          return `Node.js security posts: ${posts.length} posts, ${totalCves} CVEs`;
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : String(err);
+          console.warn(`Warning: Could not fetch Node.js security posts: ${message}`);
+          console.warn('Continuing without Node.js security post data...');
+          sink.posts([]);
+          return 'Node.js security posts unavailable; continuing without Node.js post data';
+        }
+      },
+    },
+    {
+      title: `OSV.dev (${packages.length} package versions)`,
+      task: async (message: (value: string) => void) => {
+        if (!options.osvEnabled) {
+          return skippedSourceLabel('OSV.dev');
+        }
+        try {
+          const osvResults = await queryOsvBatch(packages, cacheOpts, {
+            onProgress: (completed, total) => {
+              message(`OSV.dev (${completed} / ${total} package versions)`);
+            },
+          });
+          sink.osvResults(osvResults);
+          return `OSV.dev: ${countOsvVulnerabilities(osvResults)} vulnerabilities`;
+        } catch (err: unknown) {
+          sink.osvError(err);
+          return 'OSV.dev unavailable; continuing without OSV data';
+        }
+      },
+    },
+    {
+      title: `GitHub Advisory Database (${packages.length} package versions)`,
+      task: async (message: (value: string) => void) => {
+        if (!options.githubEnabled) {
+          return skippedSourceLabel('GitHub Advisory Database');
+        }
+        try {
+          const githubAdvisoryResults = await queryGithubAdvisoryBatch(packages, cacheOpts, githubToken, {
+            onProgress: (completed, total) => {
+              message(`GitHub Advisory Database (${completed} / ${total} package versions)`);
+            },
+          });
+          sink.githubAdvisoryResults(githubAdvisoryResults);
+          return `GitHub Advisory Database: ${countGithubVulnerabilities(githubAdvisoryResults)} vulnerabilities`;
+        } catch (err: unknown) {
+          sink.githubAdvisoryError(err);
+          return 'GitHub Advisory Database unavailable; continuing without GitHub advisory data';
+        }
+      },
+    },
+    {
+      title: repository ? `Dependabot alerts (${repository})` : 'Dependabot alerts',
+      task: async () => {
+        if (!options.dependabot) {
+          return skippedSourceLabel('Dependabot alerts');
+        }
+        if (!repository) {
+          console.warn('Warning: Could not detect GitHub repository for Dependabot alerts.');
+          console.warn('  Use --remote-repo owner/repo or run from a git clone with a GitHub origin remote.');
+          return skippedSourceLabel('Dependabot alerts');
+        }
+        if (!githubToken) {
+          console.warn(
+            `Warning: ${githubTokenEnvLabel(options.githubTokenEnv)} not set — Dependabot alerts require a GitHub token.`,
+          );
+          console.warn(
+            '  Add a token to the project .env (e.g. NPM_TOKEN), export it in your shell, or set GITHUB_TOKEN_FILE.',
+          );
+          return skippedSourceLabel('Dependabot alerts');
+        }
+        const dependabotAlerts = await fetchDependabotAlerts(
+          repository,
+          cacheOpts,
+          githubToken,
+          options.githubAlertStates,
+        );
+        sink.dependabotAlerts(dependabotAlerts);
+        return `Dependabot alerts: ${dependabotAlerts.length} alerts`;
+      },
+    },
+  ];
+}
+
+async function runSourcesWithoutSpinners(
+  options: ScanOptions,
+  cacheOpts: Partial<CacheOptions>,
+  packages: Array<{ name: string; version: string }>,
+  githubToken: string | undefined,
+  sink: SourceRunSink,
+): Promise<void> {
+  if (!options.nodePostsEnabled) {
+    log('Stage 2: Node.js security posts skipped (--skip-node-posts)', options.verbose);
+  } else {
+    log(`Stage 2: Scraping last ${options.nodePosts} Node.js security posts...`, options.verbose);
+    try {
+      const posts = await scrapeNodeSecurityPosts(options.nodePosts, cacheOpts, { verbose: options.verbose });
+      sink.posts(posts);
+      const totalCves = posts.reduce((sum, p) => sum + p.vulnerabilities.length, 0);
+      log(`  Extracted ${totalCves} CVEs from ${posts.length} posts`, options.verbose);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn(`Warning: Could not fetch Node.js security posts: ${message}`);
+      console.warn('Continuing without Node.js security post data...');
+      sink.posts([]);
+    }
+  }
+
+  log(`Stage 3: Querying OSV.dev and GitHub for ${packages.length} packages...`, options.verbose);
+
+  const [osvSettled, githubAdvisorySettled] = await Promise.allSettled([
+    options.osvEnabled
+      ? queryOsvBatch(packages, cacheOpts, { verbose: options.verbose })
+      : Promise.resolve(null),
+    options.githubEnabled
+      ? queryGithubAdvisoryBatch(packages, cacheOpts, githubToken, { verbose: options.verbose })
+      : Promise.resolve(null),
+  ]);
+
+  if (options.osvEnabled) {
+    if (osvSettled.status === 'fulfilled' && osvSettled.value) {
+      sink.osvResults(osvSettled.value);
+    } else if (osvSettled.status === 'rejected') {
+      sink.osvError(osvSettled.reason);
+    }
+  }
+
+  if (options.githubEnabled) {
+    if (githubAdvisorySettled.status === 'fulfilled' && githubAdvisorySettled.value) {
+      sink.githubAdvisoryResults(githubAdvisorySettled.value);
+    } else if (githubAdvisorySettled.status === 'rejected') {
+      sink.githubAdvisoryError(githubAdvisorySettled.reason);
+    }
+  }
+
+  if (!options.dependabot) {
+    log('Stage 4: Dependabot alerts skipped (--skip-dependabot)', options.verbose);
+    return;
+  }
+
+  log('Stage 4: Fetching Dependabot alerts...', options.verbose);
+  const repository = options.remoteRepo || detectGithubRepo(options.project);
+  if (!repository) {
+    console.warn('Warning: Could not detect GitHub repository for Dependabot alerts.');
+    console.warn('  Use --remote-repo owner/repo or run from a git clone with a GitHub origin remote.');
+    return;
+  }
+  if (!githubToken) {
+    console.warn(
+      `Warning: ${githubTokenEnvLabel(options.githubTokenEnv)} not set — Dependabot alerts require a GitHub token.`,
+    );
+    console.warn(
+      '  Add a token to the project .env (e.g. NPM_TOKEN), export it in your shell, or set GITHUB_TOKEN_FILE.',
+    );
+    return;
+  }
+
+  log(`  Repository: ${repository}`, options.verbose);
+  const dependabotAlerts = await fetchDependabotAlerts(
+    repository,
+    cacheOpts,
+    githubToken,
+    options.githubAlertStates,
+    { verbose: options.verbose },
+  );
+  sink.dependabotAlerts(dependabotAlerts);
 }

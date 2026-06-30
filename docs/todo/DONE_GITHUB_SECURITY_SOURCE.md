@@ -1,6 +1,8 @@
 # DONE — GitHub Security Source
 
 > **Completed:** 2026-06-27 — GitHub Advisory Database (default on) and optional Dependabot alerts shipped in v0.4.x.
+>
+> **CLI updates (2026-06):** All four sources on by default. Skip with `--skip-osv`, `--skip-node-posts`, `--skip-github`, `--skip-dependabot`. Dependabot remote repo flag is `--remote-repo` (replaces `--github-repo`). Removed `--no-github` and opt-in `--dependabot`.
 
 ## Goal
 
@@ -94,12 +96,12 @@ Keep source-specific parsing in `src/lib/*.utils.ts`; constants only hold stable
 
 Add flags to `scan`:
 
-- `--no-github`
-  - disables GitHub Advisory Database checks.
-- `--dependabot`
-  - enables Dependabot alert lookup.
-- `--github-repo <owner/repo>`
-  - explicit repository for Dependabot alerts.
+- `--skip-github`
+  - skip GitHub Advisory Database checks (enabled by default).
+- `--skip-dependabot`
+  - skip Dependabot alert lookup (enabled by default).
+- `--remote-repo <owner/repo>`
+  - explicit remote repository for Dependabot alerts.
 - `--github-alert-states <states>`
   - default `open`; supports GitHub states such as `open`, `fixed`, `dismissed`, `auto_dismissed`.
 - `--github-token-env <name>`
@@ -107,15 +109,15 @@ Add flags to `scan`:
 
 Default behavior:
 
-- GitHub Advisory Database: enabled by default once stable.
-- Dependabot alerts: disabled unless `--dependabot` is set and a token is available.
-- If `--dependabot` is set but no repo/token is available, print a warning and continue with other sources.
+- All four sources enabled by default (OSV, Node posts, GitHub Advisory, Dependabot).
+- Dependabot requires a token and remote repo (or detectable git origin).
+- If Dependabot cannot run (no repo/token), print a warning and continue with other sources.
 
 Repository detection:
 
-- If `--github-repo` is absent, parse `git remote get-url origin`.
+- If `--remote-repo` is absent, parse `git remote get-url origin`.
 - Support `git@github.com:owner/repo.git` and `https://github.com/owner/repo.git`.
-- Do not fail the scan if repo detection fails unless `--dependabot` was explicitly requested.
+- Do not fail the scan if repo detection fails when Dependabot is skipped or cannot authenticate.
 
 ## Data Types
 
@@ -301,8 +303,8 @@ Add focused tests with mocked fetch:
 - Correlation merges OSV and GitHub findings by GHSA.
 - Correlation merges OSV and GitHub findings by CVE alias.
 - GitHub failure returns empty source result and warning, without fatal scan exit.
-- `--no-github` skips GitHub source.
-- `--dependabot` without token warns and continues.
+- `--skip-github` skips GitHub source (shown gray in terminal progress).
+- Dependabot without token warns and continues.
 
 ## Documentation
 
@@ -333,7 +335,7 @@ Update:
 
 - [x] Add GitHub repo detection.
 - [x] Add token/env handling (`.env` from scanned project; `NPM_TOKEN` → `GH_TOKEN` → `GITHUB_TOKEN`).
-- [x] Add `--dependabot`, `--github-repo`, `--github-alert-states`, `--github-token-env`.
+- [x] Add `--skip-dependabot`, `--remote-repo`, `--github-alert-states`, `--github-token-env`.
 - [x] Fetch open Dependabot alerts (cursor pagination).
 - [x] Normalize and correlate alerts.
 - [x] Add manifest/scope/alert URL to report.
@@ -348,8 +350,8 @@ Update:
 
 ## Resolved Decisions
 
-- GitHub Advisory Database: **enabled by default** (`--no-github` to disable).
-- Dependabot alerts: **same exit-code rules** as other sources (non-zero on critical/high only).
+- GitHub Advisory Database: **enabled by default** (`--skip-github` to disable).
+- Dependabot alerts: **enabled by default** (`--skip-dependabot` to disable; requires token + remote repo).
 - Dismissed alerts: **hidden by default** (`--github-alert-states` defaults to `open`).
 - EPSS ordering: **not implemented**; severity bucket ordering unchanged.
 

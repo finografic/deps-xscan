@@ -13,7 +13,7 @@ Six-stage pipeline in `src/commands/scan/scan.logic.ts`:
 1. **Parse lockfile** (`src/lib/lockfile.utils.ts`) — resolves all deps from pnpm/npm/yarn lockfile; detects Node.js version from `.nvmrc`, `engines`, or runtime
 2. **Scrape Node.js security posts** (`src/lib/node-posts.utils.ts`) — recent vulnerability posts from `nodejs.org/en/blog/vulnerability`
 3. **Query OSV.dev + GitHub Advisory Database** (parallel) — `src/lib/osv.utils.ts`, `src/lib/github-source.utils.ts`
-4. **Fetch Dependabot alerts** (optional, `--dependabot`) — repository-specific alerts via GitHub REST API
+4. **Fetch Dependabot alerts** (on by default; `--skip-dependabot` to disable) — repository-specific alerts via GitHub REST API
 5. **Correlate** (`src/lib/correlate.utils.ts`) — matches CVEs/GHSAs across sources, deduplicates, merges GitHub metadata
 6. **Report** (`src/lib/report.utils.ts`, `src/lib/report-summary.utils.ts`) — terminal output and/or JSON; exits non-zero on critical/high hits (CI-safe)
 
@@ -53,9 +53,11 @@ xscan [options]          # bare flags imply scan
   --node-posts <n>             Node.js security posts to scan (default: 5)
   --json-out <path>            JSON output file path
   --verbose, -v                Detailed progress
-  --no-github                  Disable GitHub Advisory Database (on by default)
-  --dependabot                 Fetch Dependabot alerts for the repository
-  --github-repo <owner/repo>   Repo for Dependabot (auto-detected from git remote)
+  --skip-osv                   Skip OSV.dev (on by default)
+  --skip-node-posts            Skip Node.js security posts (on by default)
+  --skip-github                Skip GitHub Advisory Database (on by default)
+  --skip-dependabot            Skip Dependabot alerts (on by default)
+  --remote-repo <owner/repo>   Remote repo for Dependabot (auto-detected from git remote)
   --github-alert-states        Comma-separated states (default: open)
   --github-token-env           Env var name(s) for token, comma-separated
 ```
@@ -66,7 +68,7 @@ Loaded from the **scanned project's** `.env` / `.env.local`. Auto-detect: `NPM_T
 
 ## Status
 
-Pipeline runnable via `pnpm scan` (dev) or `xscan` after build/link. GitHub Advisory Database on by default; Dependabot requires `--dependabot` + token.
+Pipeline runnable via `pnpm scan` (dev) or `xscan` after build/link. All four vulnerability sources on by default; use `--skip-*` to exclude. Dependabot needs a token and remote repo (or git origin).
 
 Completed: `docs/todo/DONE_GITHUB_SECURITY_SOURCE.md` (2026-06-27).
 

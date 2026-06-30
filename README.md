@@ -6,7 +6,7 @@
 > - OSV.dev
 > - Node.js runtime advisories
 > - GitHub Advisory Database
-> - optional Dependabot alerts
+> - optional Dependabot alerts (enabled by default; use `--skip-dependabot` to disable)
 
 <img alt="deps-xscan demo" src="./docs/deps-xscan.gif" width="988" />
 
@@ -18,7 +18,7 @@ It reports findings against the versions you have resolved, labels direct/runtim
 - Parses the resolved dependency tree from `pnpm-lock.yaml` or `package-lock.json`.
 - Queries **OSV.dev** for each resolved npm package version.
 - Queries the **GitHub Advisory Database** by default.
-- Optionally imports repository-specific **Dependabot alerts**.
+- Imports repository-specific **Dependabot alerts** by default when a remote repo and token are available.
 - Checks recent **Node.js security release posts** against your project engine/runtime.
 - Shows direct, transitive, peer, runtime, and development dependency context.
 - Merges duplicate OSV/GitHub/Dependabot findings by GHSA/CVE identity.
@@ -65,8 +65,12 @@ xscan --no-cache              # bypass API cache
 | ---------------------------- | ------------------ | -------------- | ---------------------------------------------------------------------- |
 | OSV.dev                      | Yes                | No             | Open vulnerability database queried by resolved package version        |
 | GitHub Advisory Database     | Yes                | No             | GitHub-reviewed npm advisories with GHSA/CVE, CVSS, EPSS, and CWE data |
-| Dependabot alerts            | No                 | Yes            | Repository-specific alert state, manifest path, scope, and fix target  |
+| Dependabot alerts            | Yes                | Yes            | Repository-specific alert state, manifest path, scope, and fix target  |
 | Node.js security release log | Yes                | No             | Runtime advisories checked against the project Node.js version         |
+
+All four sources run by default. Skip any source with `--skip-osv`, `--skip-node-posts`,
+`--skip-github`, or `--skip-dependabot`. Skipped sources still appear in the terminal
+progress list as gray `(skipped)` lines.
 
 GitHub Advisory Database checks work without authentication, though a token can
 increase rate limits. Dependabot alerts require repository access.
@@ -85,28 +89,28 @@ Write JSON to a custom path:
 xscan --format json --json-out ./security/deps-xscan-report.json
 ```
 
-Include Dependabot alerts for the current repository:
+Skip GitHub Advisory Database queries (faster scans):
 
 ```bash
-xscan --dependabot
+xscan --skip-github
 ```
 
-Scan another repository and explicitly provide the GitHub owner/name:
+Scan a local checkout and pin the remote repo for Dependabot (when not in a git clone):
 
 ```bash
-xscan --project ~/repos/my-app --dependabot --github-repo owner/repo
+xscan --project ~/repos/my-app --remote-repo owner/repo
+```
+
+Skip Dependabot when no token is available:
+
+```bash
+xscan --skip-dependabot
 ```
 
 Force fresh data and show verbose source logs:
 
 ```bash
 xscan --no-cache --verbose
-```
-
-Disable GitHub Advisory Database checks:
-
-```bash
-xscan --no-github
 ```
 
 ## Options
@@ -120,9 +124,11 @@ xscan --no-github
 | `--node-posts <n>`               | Number of Node.js security posts to inspect. Defaults to `5`.     |
 | `--json-out <path>`              | JSON report output path. Defaults to `deps-xscan-report.json`.    |
 | `-v`, `--verbose`                | Show detailed per-source progress logs.                           |
-| `--no-github`                    | Disable GitHub Advisory Database checks.                          |
-| `--dependabot`                   | Fetch Dependabot alerts for the repository. Requires token.       |
-| `--github-repo <owner/repo>`     | Repository for Dependabot alerts. Auto-detected from git origin.  |
+| `--skip-osv`                     | Skip OSV.dev queries (enabled by default).                        |
+| `--skip-node-posts`              | Skip Node.js security post scraping (enabled by default).         |
+| `--skip-github`                  | Skip GitHub Advisory Database queries (enabled by default).       |
+| `--skip-dependabot`              | Skip Dependabot alert fetching (enabled by default).              |
+| `--remote-repo <owner/repo>`     | Remote repository for Dependabot. Auto-detected from git origin.  |
 | `--github-alert-states <states>` | Comma-separated Dependabot states. Defaults to `open`.            |
 | `--github-token-env <names>`     | Comma-separated token env var names, checked in order.            |
 | `-h`, `--help`                   | Show command help.                                                |
@@ -148,7 +154,7 @@ NPM_TOKEN=ghp_...
 Example scan:
 
 ```bash
-xscan --project ~/repos/my-app --dependabot
+xscan --project ~/repos/my-app
 ```
 
 Dependabot alerts require a token with one of:

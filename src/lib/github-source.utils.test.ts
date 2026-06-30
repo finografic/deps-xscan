@@ -9,6 +9,7 @@ vi.mock('node-fetch', () => ({
 import {
   fetchDependabotAlerts,
   parseGithubRepoFromRemote,
+  queryGithubAdvisoryBatch,
   queryGithubAdvisorySingle,
 } from 'lib/github-source.utils';
 
@@ -84,6 +85,36 @@ describe('queryGithubAdvisorySingle', () => {
 
     const result = await queryGithubAdvisorySingle('lodash', '4.17.20', { disabled: true });
     expect(result.vulnerabilities).toEqual([]);
+  });
+});
+
+describe('queryGithubAdvisoryBatch', () => {
+  beforeEach(() => {
+    fetchMock.mockReset();
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => [],
+    });
+  });
+
+  it('reports progress after each package version', async () => {
+    const progress: Array<[number, number]> = [];
+    const packages = [
+      { name: 'a', version: '1.0.0' },
+      { name: 'b', version: '2.0.0' },
+      { name: 'a', version: '1.0.0' },
+    ];
+
+    await queryGithubAdvisoryBatch(packages, { disabled: true }, undefined, {
+      onProgress: (completed, total) => progress.push([completed, total]),
+    });
+
+    expect(progress).toEqual([
+      [0, 2],
+      [1, 2],
+      [2, 2],
+    ]);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });
 
