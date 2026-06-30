@@ -95,9 +95,9 @@ Shared across Claude Code, Cursor, and GitHub Copilot.
 
 - Scanner pipeline lives in `src/lib/` (five stages plus cache) and `src/commands/scan/`; CLI entry is `src/cli.ts` built to `dist/index.mjs` (`xscan`).
 - Global binary is `xscan` (also `deps-xscan`); root `xscan` with no subcommand defaults to `scan`. `pnpm scan` is a dev shortcut in this repo only.
-- CLI infrastructure uses `@finografic/cli-kit` subpaths (`flow`, `render-help`, `commands`) — not local `src/core/`.
-- `@finografic/core` is unused; `CLI_CORE.md` was removed — align with `@finografic/cli-kit` and `CLI_KIT.md` in the cli-kit repo.
-- `.agents/external/` holds gitignored copyable hosted-demo helpers (e.g. GitHub URL → temp-dir scan); keep that orchestration outside the published package.
+- CLI infrastructure uses `@finografic/cli-kit` subpaths (`flow`, `render-help`, `commands`) — not local `src/core/`; `@finografic/core` is unused (`CLI_CORE.md` removed).
+- `demo/` is the in-repo standalone browser demo (Vite UI + unauthenticated `demo/api/` on :4001, `pnpm demo:dev`); spawns parent `dist/index.mjs`, not a vendored copy. `.agents/external/` holds gitignored copyable helpers for other hosted demos.
+- Demo GitHub suggestion repos must have a committed root `package-lock.json` or `pnpm-lock.yaml` for lockfile materialization.
 - Dev-only stage runners live in `scripts/dev-*.ts` as thin wrappers around `src/lib/*`.
 - All four vulnerability sources are on by default; use `--skip-osv`, `--skip-node-posts`, `--skip-github`, or `--skip-dependabot` to exclude one.
 - Dependabot remote repository: `--remote-repo owner/repo` (auto-detected from git origin when omitted).
