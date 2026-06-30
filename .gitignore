@@ -12,6 +12,7 @@ deps-xscan-report.json
 
 # Environment files
 .env
+.env.*
 .env.local
 .env.*.local
 
