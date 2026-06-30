@@ -53,10 +53,22 @@ This starts:
 
 ## Production split
 
-| Artifact                    | Host                              |
-| --------------------------- | --------------------------------- |
-| `pnpm build` → `demo/dist/` | Static (GitHub Pages, CDN)        |
-| `pnpm start:api`            | Node host with `node-pty` support |
+| Artifact                    | Host                                                     |
+| --------------------------- | -------------------------------------------------------- |
+| `pnpm build` → `demo/dist/` | GitHub Pages (`.github/workflows/deploy-demo-pages.yml`) |
+| `pnpm --dir demo start:api` | Node host with `node-pty` (e.g. Render)                  |
+
+### GitHub Pages
+
+1. Push to `master` (or run **Deploy Demo Pages** manually). The workflow enables Pages automatically (`configure-pages` with `enablement: true`).
+2. Repo **Settings → Secrets and variables → Actions → Variables**: set `DEMO_API_BASE_URL` to your scan API origin (no trailing slash), e.g. `https://deps-xscan-api.onrender.com`.
+3. Site URL after deploy: `https://<org>.github.io/<repo>/`.
+
+The workflow sets `VITE_BASE_PATH=/<repo>/` and bakes `VITE_API_BASE_URL` into the static build.
+
+### Scan API (Render / other)
+
+Set `NPM_TOKEN` on the API host. The API listens on `PORT` when provided (Render) or `DEMO_API_PORT` locally (default `4001`).
 
 Set `VITE_API_BASE_URL` to the deployed API origin when the UI and API are on different hosts.
 
