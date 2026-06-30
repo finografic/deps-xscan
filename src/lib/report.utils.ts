@@ -141,7 +141,7 @@ function printTerminalReport(
 
   if (dependencyFindings.length === 0 && nodeVersionFindings.length === 0) {
     console.log();
-    console.log(pc.bold(pc.green('  ✅ No known vulnerabilities found!')));
+    console.log(pc.bold(pc.green('  ✅  No known vulnerabilities found!')));
     console.log(pc.dim('  Your dependency tree looks clean against all checked sources.'));
   }
 

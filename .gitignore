@@ -4,6 +4,7 @@ node_modules/
 # Build outputs
 dist/
 build/
+demo/dist/
 *.tgz
 
 # Report outputs

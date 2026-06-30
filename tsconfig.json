@@ -32,5 +32,5 @@
     }
   },
   "include": ["src/**/*", "scripts/**/*.ts", "**/*.test.ts", "**/*.spec.ts", "vitest.config.ts"],
-  "exclude": ["node_modules", "dist", "evals"]
+  "exclude": ["node_modules", "dist", "evals", "demo"]
 }
