@@ -41,8 +41,8 @@ function suggestionClassName(repo: RepoMeta): string {
     case 'large':
       return `${base} bg-amber-200 text-amber-900 hover:bg-amber-300`;
     default: {
-      const _exhaustive: never = repo.suggestionTone;
-      return _exhaustive;
+      const exhaustive: never = repo.suggestionTone;
+      return exhaustive;
     }
   }
 }
