@@ -85,16 +85,22 @@ The embeddable React demo is published separately from the root CLI package:
 - Root package: `@finografic/deps-xscan`
 - Demo package: `@finografic/deps-xscan-demo`
 
-The existing root `release:*` scripts and `v*` release workflow publish the CLI package only.
-Use the demo-specific scripts or the **Release Demo Package** workflow for this package:
+Use the demo-specific scripts when the demo package itself changed:
 
 ```bash
 pnpm demo:release:check
-pnpm demo:release:publish
+pnpm demo:release:github:patch
+pnpm demo:release:github:minor
+pnpm demo:release:github:major
 ```
 
-The demo package publishes to GitHub Packages and expects `NPM_TOKEN` / `NODE_AUTH_TOKEN` with
-`write:packages` access.
+The demo release scripts bump `demo/package.json`, commit that bump, create a standard `v*` tag, and push the commit
+plus tag. The **Release Demo Package** workflow also listens to standard `v*` tags, but it checks GitHub Packages
+before publishing. If the `demo/package.json` version already exists, the workflow skips the demo check and publish
+steps instead of failing on a duplicate publish.
+
+The demo package publishes to GitHub Packages and expects `NPM_TOKEN` / `NODE_AUTH_TOKEN` with `write:packages`
+access.
 
 After publishing, consumers can install:
 

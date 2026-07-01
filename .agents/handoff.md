@@ -103,6 +103,20 @@ Repo variable `DEMO_API_BASE_URL` = scan API origin, no trailing slash (set on `
 
 Published site URL pattern: `https://finografic.github.io/deps-xscan/`
 
+## Package releases
+
+The repo publishes two packages:
+
+| Package                       | Version source      | Release command                                |
+| ----------------------------- | ------------------- | ---------------------------------------------- |
+| `@finografic/deps-xscan`      | root `package.json` | `pnpm release:github:{patch,minor,major}`      |
+| `@finografic/deps-xscan-demo` | `demo/package.json` | `pnpm demo:release:github:{patch,minor,major}` |
+
+Both workflows listen to standard `v*` tags. The demo workflow checks whether the current
+`demo/package.json` version is already published to GitHub Packages and skips demo publish if so. If a workflow fix is
+needed, commit and push the fix, then create a new patch tag; rerunning an old failed tag can reuse the old workflow
+definition.
+
 ## Status
 
 Pipeline runnable via `pnpm scan` (dev) or `xscan` after build/link. All four vulnerability sources on by default; use `--skip-*` to exclude. Dependabot needs a token and remote repo (or git origin).

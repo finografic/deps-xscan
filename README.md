@@ -249,6 +249,44 @@ See [Developer Workflow](./docs/process/DEVELOPER_WORKFLOW.md) and
 [Release Process](./docs/process/RELEASE_PROCESS.md) for project maintenance
 details.
 
+## Release Notes
+
+This repo publishes two GitHub Packages:
+
+- `@finografic/deps-xscan` — root CLI package.
+- `@finografic/deps-xscan-demo` — embeddable browser demo package from `demo/`.
+
+Both release workflows listen to standard `v*` tags. The demo workflow first
+checks whether the current `demo/package.json` version already exists in GitHub
+Packages. If it exists, the workflow skips the demo package check and publish
+steps instead of failing on a duplicate publish.
+
+If a release workflow fails because the workflow file itself needed a fix:
+
+1. Commit the workflow fix on `master`.
+2. Push `master`.
+3. Do not rely on rerunning the old failed tag workflow; tag runs use the
+   workflow definition from the tagged commit.
+4. Create a new patch release tag from current `master`.
+5. Let CI publish the root package and skip the demo package if its version was
+   already published.
+
+Use the root scripts for CLI releases:
+
+```bash
+pnpm release:github:patch
+pnpm release:github:minor
+pnpm release:github:major
+```
+
+Use the demo scripts only when the demo package itself changed:
+
+```bash
+pnpm demo:release:github:patch
+pnpm demo:release:github:minor
+pnpm demo:release:github:major
+```
+
 ---
 
 ## License
