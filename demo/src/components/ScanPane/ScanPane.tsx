@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { ScanSourceToggles } from '../../../shared/scan-sources';
-import type { RepoMeta } from 'data/types';
+import type { RepoMeta } from '../../data/types';
 
 import { DEFAULT_SCAN_SOURCES, scanSourcesKey } from '../../../shared/scan-sources';
 import { useScanTargetMeta } from '../../lib/useScanTargetMeta';
