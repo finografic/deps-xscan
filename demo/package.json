@@ -54,9 +54,9 @@
     "preview": "vite preview",
     "·········· PUBLISH:GITHUB": "············································",
     "release:check": "pnpm typecheck && pnpm build && pnpm pack --dry-run",
-    "release:github:patch": "pnpm run release:check && pnpm version patch && git push --follow-tags",
-    "release:github:minor": "pnpm run release:check && pnpm version minor && git push --follow-tags",
-    "release:github:major": "pnpm run release:check && pnpm version major && git push --follow-tags",
+    "release:github:patch": "pnpm run release:check && tsx ../scripts/release-demo.ts patch",
+    "release:github:minor": "pnpm run release:check && tsx ../scripts/release-demo.ts minor",
+    "release:github:major": "pnpm run release:check && tsx ../scripts/release-demo.ts major",
     "release:publish": "pnpm publish --no-git-checks --registry https://npm.pkg.github.com",
     "start:api": "tsx api/server.ts",
     "typecheck": "tsc --project tsconfig.json --noEmit"
