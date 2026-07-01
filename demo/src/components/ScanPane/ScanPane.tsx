@@ -107,6 +107,7 @@ export function ScanPane({ repo, repoUrl, suggestions, onRepoUrlSubmit }: ScanPa
             <div key={key} className="flex items-center gap-2">
               <Checkbox
                 id={fieldId}
+                className="size-[1.15rem]"
                 checked={scanSources[key]}
                 onCheckedChange={(checked) => {
                   setScanSources((current) => ({

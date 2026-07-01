@@ -6,9 +6,9 @@ export interface ScanSourceToggles {
 }
 
 export const DEFAULT_SCAN_SOURCES: ScanSourceToggles = {
-  osv: true,
+  osv: false,
   nodePosts: true,
-  githubAdvisory: true,
+  githubAdvisory: false,
   dependabot: true,
 };
 
