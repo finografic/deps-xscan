@@ -36,10 +36,28 @@ jobs:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
+      - name: Check published demo version
+        id: demo-version
+        run: |
+          version="$(node -p "require('./demo/package.json').version")"
+
+          if pnpm view "@finografic/deps-xscan-demo@${version}" version --registry https://npm.pkg.github.com >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Demo package ${version} is already published; skipping publish."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "Demo package ${version} is not published yet."
+          fi
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
       - name: Check demo package
+        if: steps.demo-version.outputs.exists != 'true'
         run: pnpm demo:release:check
 
       - name: Publish demo package
+        if: steps.demo-version.outputs.exists != 'true'
         run: pnpm demo:release:publish
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
