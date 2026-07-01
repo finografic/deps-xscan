@@ -78,6 +78,38 @@ Set `VITE_API_BASE_URL` to the deployed API origin when the UI and API are on di
 - `GET /api/github-repo?repoUrl=…` — repository metadata
 - `GET /api/scan?repoUrl=…` — SSE stream of xscan terminal output
 
+## Package publishing
+
+The embeddable React demo is published separately from the root CLI package:
+
+- Root package: `@finografic/deps-xscan`
+- Demo package: `@finografic/deps-xscan-demo`
+
+The existing root `release:*` scripts and `v*` release workflow publish the CLI package only.
+Use the demo-specific scripts or the **Release Demo Package** workflow for this package:
+
+```bash
+pnpm demo:release:check
+pnpm demo:release:publish
+```
+
+The demo package publishes to GitHub Packages and expects `NPM_TOKEN` / `NODE_AUTH_TOKEN` with
+`write:packages` access.
+
+After publishing, consumers can install:
+
+```bash
+pnpm add @finografic/deps-xscan-demo
+```
+
+Import the component and styles:
+
+```tsx
+import { DemoPage as XscanDemoPage } from '@finografic/deps-xscan-demo';
+import '@finografic/deps-xscan-demo/app.css';
+```
+
 ## Next steps
 
-Once stable here, publish `@finografic/deps-xscan-demo` and consume it from `monorepo-demo/apps/demo-xscan` as a thin portfolio wrapper.
+After publishing, replace the local `link:` dependency in `monorepo-demo/apps/demo-xscan` with the
+published `@finografic/deps-xscan-demo` version.

@@ -14,9 +14,11 @@
     "types": ["vite/client"],
     "paths": {
       "components/*": ["./src/components/*"],
+      "ui/*": ["./src/components/ui/*"],
       "pages/*": ["./src/pages/*"],
       "data/*": ["./src/data/*"],
       "lib/*": ["./src/lib/*"],
+      "utils": ["./src/lib/utils.ts"],
       "shared/*": ["./shared/*"]
     }
   },

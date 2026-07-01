@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
+import type { RepoMeta } from '../data/types';
 
 import { REPOS } from '../data/repos';
-import type { RepoMeta } from '../data/types';
 
 export interface ScanTargetMeta {
   name: string;

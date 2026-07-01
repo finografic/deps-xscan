@@ -3,8 +3,9 @@ import { FitAddon } from '@xterm/addon-fit';
 import { Terminal } from '@xterm/xterm';
 import '@xterm/xterm/css/xterm.css';
 import { useEffect, useRef } from 'react';
-import { appendScanSourceParams } from '../../../shared/scan-sources';
 import type { ScanSourceToggles } from '../../../shared/scan-sources';
+
+import { appendScanSourceParams } from '../../../shared/scan-sources';
 
 interface XscanTerminalProps {
   repoId: string | null;

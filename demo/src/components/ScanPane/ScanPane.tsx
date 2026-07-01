@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react';
 import type { ScanSourceToggles } from '../../../shared/scan-sources';
-import type { RepoMeta } from '../../data/types';
+import type { RepoMeta } from 'data/types';
 
 import { DEFAULT_SCAN_SOURCES, scanSourcesKey } from '../../../shared/scan-sources';
 import { useScanTargetMeta } from '../../lib/useScanTargetMeta';
+import { Button } from '../ui/button';
+import { Checkbox } from '../ui/checkbox';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
 import { XscanTerminal } from '../XscanTerminal/XscanTerminal';
 
 interface ScanPaneProps {
@@ -64,7 +68,7 @@ export function ScanPane({ repo, repoUrl, suggestions, onRepoUrlSubmit }: ScanPa
   }, [repoUrl, repo?.id]);
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden">
+    <div className="xscan-demo flex flex-1 flex-col overflow-hidden">
       <header className="flex-none px-6 py-5">
         <h2 className="text-xl font-semibold text-foreground">{XSCAN_TITLE}</h2>
         <a
@@ -101,21 +105,19 @@ export function ScanPane({ repo, repoUrl, suggestions, onRepoUrlSubmit }: ScanPa
 
           return (
             <div key={key} className="flex items-center gap-2">
-              <input
+              <Checkbox
                 id={fieldId}
-                type="checkbox"
-                className="size-4 rounded border border-border accent-primary"
                 checked={scanSources[key]}
-                onChange={(event) => {
+                onCheckedChange={(checked) => {
                   setScanSources((current) => ({
                     ...current,
-                    [key]: event.target.checked,
+                    [key]: checked,
                   }));
                 }}
               />
-              <label htmlFor={fieldId} className="text-sm font-medium text-muted-foreground">
+              <Label htmlFor={fieldId} className="text-sm font-medium text-muted-foreground">
                 {label}
-              </label>
+              </Label>
             </div>
           );
         })}
@@ -163,13 +165,13 @@ export function ScanPane({ repo, repoUrl, suggestions, onRepoUrlSubmit }: ScanPa
           startScan(repoUrlInput.trim());
         }}
       >
-        <label className="sr-only" htmlFor="github-repo-url">
+        <Label className="sr-only" htmlFor="github-repo-url">
           GitHub repository URL
-        </label>
+        </Label>
         <div className="my-2 flex gap-3">
-          <input
+          <Input
             id="github-repo-url"
-            className="flex-1 rounded-md border-2 border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
+            className="h-11 flex-1 rounded-md border-2 border-border bg-background px-3 py-2 text-sm text-foreground focus-visible:border-primary focus-visible:ring-primary/20"
             type="url"
             inputMode="url"
             pattern={GITHUB_REPO_URL_PATTERN}
@@ -179,12 +181,12 @@ export function ScanPane({ repo, repoUrl, suggestions, onRepoUrlSubmit }: ScanPa
             onChange={(event) => setRepoUrlInput(event.target.value)}
             required
           />
-          <button
+          <Button
             type="submit"
-            className="min-h-11 rounded-md bg-primary px-5 text-sm font-semibold text-white hover:bg-primary/90"
+            className="min-h-11 rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
           >
             Scan project vulnerabilities
-          </button>
+          </Button>
         </div>
 
         <div className="gap-2">
@@ -208,10 +210,12 @@ export function ScanPane({ repo, repoUrl, suggestions, onRepoUrlSubmit }: ScanPa
               const suggestionUrl = repoUrlForSuggestion(suggestion);
 
               return (
-                <button
+                <Button
                   key={suggestion.id}
                   className={suggestionClassName(suggestion)}
                   type="button"
+                  size="sm"
+                  variant="ghost"
                   title={
                     suggestion.suggestionTone === 'findings'
                       ? 'Likely findings — security training or intentionally vulnerable target'
@@ -225,7 +229,7 @@ export function ScanPane({ repo, repoUrl, suggestions, onRepoUrlSubmit }: ScanPa
                   }}
                 >
                   {suggestion.title}
-                </button>
+                </Button>
               );
             })}
           </div>

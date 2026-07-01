@@ -14,9 +14,11 @@ export default defineConfig({
   resolve: {
     alias: {
       components: resolve('src/components'),
+      ui: resolve('src/components/ui'),
       pages: resolve('src/pages'),
       data: resolve('src/data'),
       lib: resolve('src/lib'),
+      utils: resolve('src/lib/utils.ts'),
       shared: resolve('shared'),
     },
   },
