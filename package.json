@@ -52,7 +52,7 @@
     "demo:dev": "pnpm --dir demo dev",
     "demo:build": "pnpm --dir demo build",
     "demo:release:check": "pnpm --dir demo typecheck && pnpm --dir demo build && pnpm --dir demo pack --dry-run",
-    "demo:release:publish": "pnpm --dir demo publish --no-git-checks --registry https://npm.pkg.github.com",
+    "demo:release:publish": "pnpm --filter @finografic/deps-xscan-demo publish --no-git-checks --registry https://npm.pkg.github.com",
     "·········· TESTING": "···················································",
     "test": "vitest",
     "test:run": "vitest run",
