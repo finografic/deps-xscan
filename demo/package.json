@@ -1,6 +1,6 @@
 {
   "name": "@finografic/deps-xscan-demo",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "private": false,
   "description": "Embeddable React browser demo for @finografic/deps-xscan.",
   "keywords": [
