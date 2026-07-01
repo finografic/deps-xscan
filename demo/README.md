@@ -1,6 +1,6 @@
 # xscan browser demo
 
-Standalone browser demo for `@finografic/deps-xscan`. Duplicated from `monorepo-starter/apps/demo-xscan` and decoupled from portfolio auth/layout.
+Standalone browser demo for `@finografic/deps-xscan`. Migrated from `monorepo-demo/apps/demo-xscan` and decoupled from portfolio auth/layout.
 
 ## Layout
 
@@ -80,4 +80,4 @@ Set `VITE_API_BASE_URL` to the deployed API origin when the UI and API are on di
 
 ## Next steps
 
-Once stable here, publish `@finografic/xscan-demo` and replace `monorepo-starter/apps/demo-xscan` with a thin portfolio wrapper.
+Once stable here, publish `@finografic/deps-xscan-demo` and consume it from `monorepo-demo/apps/demo-xscan` as a thin portfolio wrapper.

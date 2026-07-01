@@ -1,10 +1,10 @@
-import { XscanTerminal } from 'components/XscanTerminal/XscanTerminal';
 import { useEffect, useState } from 'react';
-import { DEFAULT_SCAN_SOURCES, scanSourcesKey } from 'shared/scan-sources';
-import type { RepoMeta } from 'data/types';
-import type { ScanSourceToggles } from 'shared/scan-sources';
+import type { ScanSourceToggles } from '../../../shared/scan-sources';
+import type { RepoMeta } from '../../data/types';
 
-import { useScanTargetMeta } from 'lib/useScanTargetMeta';
+import { DEFAULT_SCAN_SOURCES, scanSourcesKey } from '../../../shared/scan-sources';
+import { useScanTargetMeta } from '../../lib/useScanTargetMeta';
+import { XscanTerminal } from '../XscanTerminal/XscanTerminal';
 
 interface ScanPaneProps {
   repo: RepoMeta | null;
@@ -76,7 +76,7 @@ export function ScanPane({ repo, repoUrl, suggestions, onRepoUrlSubmit }: ScanPa
           https://github.com/finografic/deps-xscan
         </a>
         <p className="mt-1 text-sm text-muted-foreground">{XSCAN_SUBTITLE}</p>
-        <ul className="mt-3 grid list-disc grid-cols-2 gap-x-8 gap-y-1 pl-5 text-sm font-semibold text-muted-foreground">
+        <ul className="mt-3 grid max-w-[600px] list-disc grid-cols-2 gap-x-8 gap-y-1 pl-5 text-sm font-semibold text-muted-foreground">
           <li>OSV.dev</li>
           <li>Node.js runtime advisories</li>
           <li>GitHub Advisory Database</li>
@@ -124,9 +124,11 @@ export function ScanPane({ repo, repoUrl, suggestions, onRepoUrlSubmit }: ScanPa
       <div className="flex flex-col px-6 pt-3">
         {hasScanTarget && targetMeta ? (
           <div>
-            <h3 className="text-base font-bold text-foreground">Scan target: {targetMeta.name}</h3>
+            <h3 className="text-base font-bold text-foreground">
+              Scan target: <span className="text-primary">{targetMeta.name}</span>
+            </h3>
             <a
-              className="text-sm font-semibold text-primary underline"
+              className="text-sm font-semibold text-primary underline opacity-70 hover:opacity-100"
               href={targetMeta.githubUrl}
               target="_blank"
               rel="noopener noreferrer"

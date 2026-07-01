@@ -1,1 +1,1 @@
-export { REPOS } from '../../shared/repos';
+export { findRepo, REPOS } from '../../shared/repos';

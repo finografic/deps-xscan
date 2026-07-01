@@ -1,6 +1,7 @@
-import { ScanPane } from 'components/ScanPane/ScanPane';
-import { REPOS } from 'data/repos';
 import { useState } from 'react';
+
+import { ScanPane } from '../components/ScanPane/ScanPane';
+import { REPOS } from '../data/repos';
 
 export function DemoPage() {
   const [repoUrl, setRepoUrl] = useState<string | null>(null);
