@@ -2,17 +2,12 @@ import { useEffect, useState } from 'react';
 import type { RepoMeta } from '../data/types';
 
 import { REPOS } from '../data/repos';
+import { apiUrl } from './api-base-url';
 
 export interface ScanTargetMeta {
   name: string;
   description: string | null;
   githubUrl: string;
-}
-
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '');
-
-function apiUrl(path: string): string {
-  return `${API_BASE_URL}${path}`;
 }
 
 function githubSlugFromUrl(repoUrl: string): string | null {
@@ -58,7 +53,11 @@ function metaFromRepo(repo: RepoMeta): ScanTargetMeta {
   };
 }
 
-export function useScanTargetMeta(repo: RepoMeta | null, repoUrl: string | null): ScanTargetMeta | null {
+export function useScanTargetMeta(
+  repo: RepoMeta | null,
+  repoUrl: string | null,
+  apiBaseUrl?: string,
+): ScanTargetMeta | null {
   const [meta, setMeta] = useState<ScanTargetMeta | null>(null);
 
   useEffect(() => {
@@ -89,9 +88,12 @@ export function useScanTargetMeta(repo: RepoMeta | null, repoUrl: string | null)
 
     void (async () => {
       try {
-        const res = await fetch(apiUrl(`/api/github-repo?repoUrl=${encodeURIComponent(repoUrl)}`), {
-          signal: controller.signal,
-        });
+        const res = await fetch(
+          apiUrl(`/api/github-repo?repoUrl=${encodeURIComponent(repoUrl)}`, apiBaseUrl),
+          {
+            signal: controller.signal,
+          },
+        );
         if (!res.ok) return;
 
         const data = (await res.json()) as { fullName: string; description: string | null };
@@ -108,7 +110,7 @@ export function useScanTargetMeta(repo: RepoMeta | null, repoUrl: string | null)
     })();
 
     return () => controller.abort();
-  }, [repo, repoUrl]);
+  }, [apiBaseUrl, repo, repoUrl]);
 
   return meta;
 }

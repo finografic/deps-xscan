@@ -6,25 +6,26 @@ import { useEffect, useRef } from 'react';
 import type { ScanSourceToggles } from '../../../shared/scan-sources';
 
 import { appendScanSourceParams } from '../../../shared/scan-sources';
+import { apiUrl } from '../../lib/api-base-url';
 
 interface XscanTerminalProps {
+  apiBaseUrl?: string;
   repoId: string | null;
   repoUrl: string | null;
   scanSources: ScanSourceToggles;
   standby: boolean;
 }
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '');
-
-function apiUrl(path: string): string {
-  return `${API_BASE_URL}${path}`;
-}
-
 function writeStandbyPrompt(terminal: Terminal): void {
   terminal.write('\x1b[32m$\x1b[0m ');
 }
 
-function scanUrl(repoId: string | null, repoUrl: string | null, scanSources: ScanSourceToggles): string {
+function scanUrl(
+  repoId: string | null,
+  repoUrl: string | null,
+  scanSources: ScanSourceToggles,
+  configuredApiBaseUrl?: string,
+): string {
   const searchParams = new URLSearchParams();
   if (repoUrl) {
     searchParams.set('repoUrl', repoUrl);
@@ -34,10 +35,10 @@ function scanUrl(repoId: string | null, repoUrl: string | null, scanSources: Sca
 
   appendScanSourceParams(searchParams, scanSources);
 
-  return apiUrl(`/api/scan?${searchParams.toString()}`);
+  return apiUrl(`/api/scan?${searchParams.toString()}`, configuredApiBaseUrl);
 }
 
-export function XscanTerminal({ repoId, repoUrl, scanSources, standby }: XscanTerminalProps) {
+export function XscanTerminal({ apiBaseUrl, repoId, repoUrl, scanSources, standby }: XscanTerminalProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<Terminal | null>(null);
   const fitRef = useRef<FitAddon | null>(null);
@@ -100,7 +101,7 @@ export function XscanTerminal({ repoId, repoUrl, scanSources, standby }: XscanTe
 
     void (async () => {
       try {
-        const res = await fetch(scanUrl(repoId, repoUrl, scanSources), {
+        const res = await fetch(scanUrl(repoId, repoUrl, scanSources, apiBaseUrl), {
           signal: controller.signal,
         });
         if (!res.ok || !res.body) {
@@ -143,7 +144,7 @@ export function XscanTerminal({ repoId, repoUrl, scanSources, standby }: XscanTe
     })();
 
     return () => controller.abort();
-  }, [repoId, repoUrl, scanSources, standby]);
+  }, [apiBaseUrl, repoId, repoUrl, scanSources, standby]);
 
   return (
     <div

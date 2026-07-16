@@ -11,6 +11,7 @@ import { Label } from '../ui/label';
 import { XscanTerminal } from '../XscanTerminal/XscanTerminal';
 
 interface ScanPaneProps {
+  apiBaseUrl?: string;
   repo: RepoMeta | null;
   repoUrl: string | null;
   suggestions: RepoMeta[];
@@ -51,12 +52,12 @@ function suggestionClassName(repo: RepoMeta): string {
   }
 }
 
-export function ScanPane({ repo, repoUrl, suggestions, onRepoUrlSubmit }: ScanPaneProps) {
+export function ScanPane({ apiBaseUrl, repo, repoUrl, suggestions, onRepoUrlSubmit }: ScanPaneProps) {
   const [repoUrlInput, setRepoUrlInput] = useState(repoUrl ?? '');
   const [scanSources, setScanSources] = useState<ScanSourceToggles>(DEFAULT_SCAN_SOURCES);
   const [activeScanSources, setActiveScanSources] = useState<ScanSourceToggles>(DEFAULT_SCAN_SOURCES);
   const hasScanTarget = Boolean(repo || repoUrl);
-  const targetMeta = useScanTargetMeta(repo, repoUrl);
+  const targetMeta = useScanTargetMeta(repo, repoUrl, apiBaseUrl);
 
   const startScan = (nextRepoUrl: string) => {
     onRepoUrlSubmit(nextRepoUrl);
@@ -90,6 +91,7 @@ export function ScanPane({ repo, repoUrl, suggestions, onRepoUrlSubmit }: ScanPa
 
       <div className="flex flex-1 flex-col overflow-hidden p-4 pt-2">
         <XscanTerminal
+          apiBaseUrl={apiBaseUrl}
           key={`${repo?.id ?? repoUrl ?? 'standby'}-${scanSourcesKey(activeScanSources)}`}
           repoId={repo?.id ?? null}
           repoUrl={repoUrl}

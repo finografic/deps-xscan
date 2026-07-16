@@ -66,6 +66,19 @@ This starts:
 
 The workflow sets `VITE_BASE_PATH=/<repo>/` and bakes `VITE_API_BASE_URL` into the static build.
 
+## Embedding
+
+The React demo can receive its scan API origin from the host app. When `apiBaseUrl` is omitted, the demo falls back to
+`VITE_API_BASE_URL`; pass an empty string to use relative `/api/*` requests.
+
+```tsx
+import { DemoPage } from '@finografic/deps-xscan-demo';
+
+export function XscanDemo() {
+  return <DemoPage apiBaseUrl="https://deps-xscan-api.example.com" />;
+}
+```
+
 ### Scan API (Render / other)
 
 Set `NPM_TOKEN` on the API host. The API listens on `PORT` when provided (Render) or `DEMO_API_PORT` locally (default `4001`).
