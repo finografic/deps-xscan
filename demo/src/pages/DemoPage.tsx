@@ -4,7 +4,7 @@ import { ScanPane } from '../components/ScanPane/ScanPane';
 import { REPOS } from '../data/repos';
 
 export interface DemoPageProps {
-  apiBaseUrl?: string;
+  apiBaseUrl?: string | undefined;
 }
 
 export function DemoPage({ apiBaseUrl }: DemoPageProps = {}) {

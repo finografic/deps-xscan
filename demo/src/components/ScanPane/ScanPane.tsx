@@ -11,7 +11,7 @@ import { Label } from '../ui/label';
 import { XscanTerminal } from '../XscanTerminal/XscanTerminal';
 
 interface ScanPaneProps {
-  apiBaseUrl?: string;
+  apiBaseUrl?: string | undefined;
   repo: RepoMeta | null;
   repoUrl: string | null;
   suggestions: RepoMeta[];

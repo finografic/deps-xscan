@@ -9,7 +9,7 @@ import { appendScanSourceParams } from '../../../shared/scan-sources';
 import { apiUrl } from '../../lib/api-base-url';
 
 interface XscanTerminalProps {
-  apiBaseUrl?: string;
+  apiBaseUrl?: string | undefined;
   repoId: string | null;
   repoUrl: string | null;
   scanSources: ScanSourceToggles;
