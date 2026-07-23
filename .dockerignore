@@ -1,0 +1,12 @@
+.DS_Store
+.git
+.github
+.vscode
+
+.env
+.env.*
+!.env.example
+
+**/.DS_Store
+**/dist
+**/node_modules
